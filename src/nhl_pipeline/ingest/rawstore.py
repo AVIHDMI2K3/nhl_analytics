@@ -6,6 +6,7 @@ Layout, under the raw root (data/raw by default):
     season=2023/game=2023020001/play-by-play.json.gz
     season=2023/game=2023020001/boxscore.json.gz
     season=2023/game=2023020001/shiftcharts.json.gz
+    season=2023/reference/skater_timeonice.json.gz  the NHL's own season totals, for checking only
 
 Each file holds the response bytes exactly as the NHL sent them, gzipped.
 A game counts as loaded only when all three of its files exist, with one
@@ -28,6 +29,11 @@ def season_dir(raw_root, season):
 
 def schedule_path(raw_root, season, date):
     return season_dir(raw_root, season) / "schedule" / f"{date}.json.gz"
+
+
+def reference_path(raw_root, season, name):
+    """Season-level reference data from the NHL stats service, used only to check our numbers."""
+    return season_dir(raw_root, season) / "reference" / f"{name}.json.gz"
 
 
 def game_dir(raw_root, season, game_id):

@@ -7,7 +7,7 @@ Run from the repo root with the `nhl` conda environment active:
 
 Reads  data/staging/season=2023/{games,events,shifts,boxscore_players}.parquet
 Writes data/intermediate/season=2023/
-           shifts_clean.parquet         shifts without duplicates, goalies marked, conflicts flagged
+           shifts_clean.parquet         shifts without duplicates or overlaps, goalies marked, ambiguous ones flagged
            event_on_ice.parquet         one row per event: who was on the ice, and whether the
                                         counts agree with situationCode
            player_game_plus_minus.parquet   plus/minus per skater per game, from our on-ice data
@@ -26,7 +26,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from onice import build_event_on_ice, clean_shifts, game_plus_minus
+from onice import build_event_on_ice, clean_shifts, game_plus_minus, shifts_of_game_teams
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
@@ -198,7 +198,10 @@ def main():
     )
     shifts = read_columns(
         staging / "shifts.parquet",
-        ["game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds"],
+        [
+            "game_id", "player_id", "team_id", "period", "shift_number", "shift_id",
+            "start_game_seconds", "end_game_seconds",
+        ],
     )
     box = read_columns(
         staging / "boxscore_players.parquet",
@@ -231,9 +234,12 @@ def main():
     try:
         for index, game_id in enumerate(game_ids, start=1):
             game = games[game_id]
-            clean = clean_shifts(
-                rows_at(shifts, shift_positions.get(game_id, [])), goalie_ids[game_id]
-            )
+            all_shift_rows = rows_at(shifts, shift_positions.get(game_id, []))
+            shift_rows = shifts_of_game_teams(all_shift_rows, game)
+            totals["shift_rows_other_teams"] += len(all_shift_rows) - len(shift_rows)
+            clean = clean_shifts(shift_rows, goalie_ids[game_id])
+            totals["shift_rows"] += len(shift_rows)
+            totals["shift_rows_dropped"] += len(shift_rows) - len(clean)
             rows = build_event_on_ice(game, rows_at(events, event_positions.get(game_id, [])), clean)
             pending["shifts_clean"].extend(shift_rows_for_output(clean))
             pending["event_on_ice"].extend(rows)
@@ -279,6 +285,11 @@ def main():
     compared = totals["matches"] + totals["mismatches"]
     agreement = 100 * totals["matches"] / compared if compared else 0.0
     print(f"\nTables written to {out}")
+    print(
+        f"Shift rows dropped as duplicates or overlaps: {totals['shift_rows_dropped']} "
+        f"of {totals['shift_rows']}"
+    )
+    print(f"Shift rows removed because the team is not in the game: {totals['shift_rows_other_teams']}")
     print(f"Events: {totals['events']}  (no situationCode: {totals['no_code']})")
     print(f"On-ice counts agree with situationCode: {agreement:.2f}% of {compared} events")
     print(
@@ -306,6 +317,9 @@ def main():
         "season": args.season,
         "games_built": len(games_done),
         "games_skipped_no_shifts": skipped,
+        "shift_rows": totals["shift_rows"],
+        "shift_rows_dropped": totals["shift_rows_dropped"],
+        "shift_rows_other_teams": totals["shift_rows_other_teams"],
         "events": totals["events"],
         "events_without_code": totals["no_code"],
         "agreement_pct": round(agreement, 3),

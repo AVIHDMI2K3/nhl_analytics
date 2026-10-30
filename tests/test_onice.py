@@ -22,9 +22,10 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 GOALIES = {10, 40}
 
 
-def shift(player, team, start, end, period=1):
+def shift(player, team, start, end, period=1, number=None):
     return {
         "game_id": 1, "player_id": player, "team_id": team, "period": period,
+        "shift_number": number, "shift_id": number,
         "start_game_seconds": start, "end_game_seconds": end,
     }
 
@@ -67,23 +68,37 @@ def test_rule_for_event_type():
 # ---- shifts -----------------------------------------------------------------
 
 
-def test_clean_shifts_drops_exact_duplicates_marks_goalies_and_flags_conflicts():
+def test_clean_shifts_drops_duplicates_and_overlaps_in_shift_number_order():
     rows = [
-        shift(11, 1, 0, 60),
-        shift(11, 1, 0, 60),  # exact duplicate (the NHL gives it a different id)
-        shift(10, 1, 0, 1200),
-        shift(10, 1, 45, 114),  # overlaps the goalie's whole-period row, not identical
-        shift(12, 1, 0, 60),
-        shift(12, 1, 60, 90),  # touches but does not overlap
+        shift(11, 1, 0, 60, number=1),
+        shift(11, 1, 0, 60, number=2),  # exact copy: dropped, and nothing is flagged
+        shift(10, 1, 0, 1200, number=1),
+        shift(10, 1, 45, 114, number=2),  # overlaps the first row: dropped, first flagged
+        shift(12, 1, 0, 60, number=1),
+        shift(12, 1, 60, 90, number=2),  # only touches: kept
         shift(13, 1, None, 60),  # unusable
+        shift(14, 1, 120, 160, number=1),
+        shift(14, 1, 100, 140, number=2),  # the lower shift number wins, though this starts earlier
     ]
     cleaned = onice.clean_shifts(rows, goalie_ids={10})
-    assert len(cleaned) == 5
     by_key = {(s["player_id"], s["start"], s["end"]): s for s in cleaned}
+    assert sorted(by_key) == [(10, 0, 1200), (11, 0, 60), (12, 0, 60), (12, 60, 90), (14, 120, 160)]
     assert by_key[(10, 0, 1200)]["is_goalie"] and by_key[(10, 0, 1200)]["has_conflict"]
-    assert by_key[(10, 45, 114)]["has_conflict"]
     assert not by_key[(11, 0, 60)]["is_goalie"] and not by_key[(11, 0, 60)]["has_conflict"]
     assert not by_key[(12, 0, 60)]["has_conflict"] and not by_key[(12, 60, 90)]["has_conflict"]
+    assert by_key[(14, 120, 160)]["has_conflict"]
+
+
+def test_shifts_of_other_teams_are_removed():
+    game = {"home_team_id": 1, "away_team_id": 2}
+    rows = [shift(10, 1, 0, 60), shift(40, 2, 0, 60), shift(99, 3, 0, 60)]
+    assert [r["player_id"] for r in onice.shifts_of_game_teams(rows, game)] == [10, 40]
+
+
+def test_clean_shifts_sorts_rows_without_a_shift_number_last():
+    rows = [shift(11, 1, 0, 100), shift(11, 1, 50, 80, number=1)]
+    cleaned = onice.clean_shifts(rows, set())
+    assert [(s["start"], s["end"]) for s in cleaned] == [(50, 80)]
 
 
 def test_active_shifts_boundaries_for_both_rules():
@@ -129,7 +144,7 @@ def test_disagreement_missing_code_shootout_and_missing_clock():
 
 
 def test_conflicting_shift_is_flagged_and_the_player_counted_once():
-    shifts = game_shifts() + [shift(11, 1, 10, 50)]  # second, different shift for player 11
+    shifts = game_shifts() + [shift(11, 1, 10, 50)]  # overlaps player 11's shift: dropped, his shift flagged
     row = build([event(1, 30, "hit")], shifts)[0]
     assert row["uses_conflicting_shift"] is True
     assert row["home_skater_ids"] == [11, 12, 13, 14, 15]

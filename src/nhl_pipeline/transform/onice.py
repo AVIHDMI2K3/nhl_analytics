@@ -11,7 +11,8 @@ Inputs (rows from the staging tables):
 
 Method:
   1. Clean the shifts: drop duplicate and overlapping rows (see clean_shifts), mark
-     goalies, and flag the shifts that were ambiguous.
+     goalies, flag the shifts that were ambiguous, and fill goalie gaps from dropped
+     period-long goalie rows (see fill_goalie_gaps).
   2. For every event, find the shifts that are active at the event's second.
      Whether the first and last second of a shift count depends on the event
      type (see END_INCLUSIVE_EVENT_TYPES). The rule was chosen by comparing the
@@ -34,6 +35,9 @@ NO_NUMBER = 10**9  # sorts shift rows without a shift number or id last
 
 RULE_START_INCLUSIVE = "A"  # shift covers  start <= t <  end
 RULE_END_INCLUSIVE = "B"  # shift covers  start <  t <= end
+
+REGULATION_PERIOD_SECONDS = 1200
+MIN_PERIOD_LONG_SECONDS = 300  # the shortest period (regular-season overtime) is 5 minutes
 
 
 def rule_for(event_type):
@@ -73,6 +77,66 @@ def shifts_of_game_teams(shift_rows, game):
     return [row for row in shift_rows if row["team_id"] in teams]
 
 
+def is_period_long(row):
+    """A shift row that starts when its period starts and lasts at least as long as the shortest period.
+
+    The NHL's goalie rows are sometimes a placeholder for a whole period (2400-3600, or
+    3600-3900 in overtime) next to shorter rows for the same goalie.
+    """
+    period_start = REGULATION_PERIOD_SECONDS * (row["period"] - 1)
+    return row["start_game_seconds"] == period_start and row["end_game_seconds"] - period_start >= MIN_PERIOD_LONG_SECONDS
+
+
+def uncovered_parts(start, end, intervals):
+    """The parts of [start, end) that no interval in `intervals` (pairs of start, end) covers, as pairs."""
+    parts = []
+    position = start
+    for interval_start, interval_end in sorted(intervals):
+        if interval_end <= position:
+            continue
+        if interval_start >= end:
+            break
+        if interval_start > position:
+            parts.append((position, interval_start))
+        position = max(position, interval_end)
+        if position >= end:
+            break
+    if position < end:
+        parts.append((position, end))
+    return parts
+
+
+def fill_goalie_gaps(shifts, dropped_rows):
+    """Add goalie time from dropped period-long goalie rows, where no kept goalie row of the team covers it.
+
+    Cleaning drops a whole-period goalie row when it overlaps a shorter row of the same goalie.
+    Sometimes the shorter row ends early and the whole-period row is the only record of him in
+    net afterwards, so the play-by-play names a goalie whose shift is gone (13 shots in 4 games in
+    2025-26). Only the stretches that no kept goalie row of that team covers are added, and they are
+    marked has_conflict. `dropped_rows` are raw shift rows; returns the added shifts.
+    """
+    added = []
+    for row in dropped_rows:
+        covered = [
+            (s["start"], s["end"]) for s in shifts + added
+            if s["is_goalie"] and s["team_id"] == row["team_id"] and s["period"] == row["period"]
+        ]
+        for start, end in uncovered_parts(row["start_game_seconds"], row["end_game_seconds"], covered):
+            added.append(
+                {
+                    "game_id": row["game_id"],
+                    "player_id": row["player_id"],
+                    "team_id": row["team_id"],
+                    "period": row["period"],
+                    "start": start,
+                    "end": end,
+                    "is_goalie": True,
+                    "has_conflict": True,
+                }
+            )
+    return added
+
+
 def clean_shifts(shift_rows, goalie_ids):
     """Drop duplicate and overlapping shift rows, mark goalies, and flag ambiguous shifts.
 
@@ -85,7 +149,8 @@ def clean_shifts(shift_rows, goalie_ids):
 
     A kept shift that overlapped a dropped row that was not an exact copy is marked
     has_conflict, because the data was ambiguous there. Rows with a missing start or
-    end are dropped.
+    end are dropped. A dropped goalie row that lasts a whole period fills any stretch
+    of its period that no kept goalie row of the team covers (see fill_goalie_gaps).
     """
     groups = {}
     for row in shift_rows:
@@ -94,6 +159,7 @@ def clean_shifts(shift_rows, goalie_ids):
         groups.setdefault((row["player_id"], row["period"]), []).append(row)
 
     shifts = []
+    dropped_period_long = []
     for rows in groups.values():
         rows.sort(
             key=lambda r: (
@@ -111,6 +177,12 @@ def clean_shifts(shift_rows, goalie_ids):
                 for shift in overlapping:
                     if (shift["start"], shift["end"]) != (start, end):
                         shift["has_conflict"] = True
+                if (
+                    row["player_id"] in goalie_ids
+                    and is_period_long(row)
+                    and all((s["start"], s["end"]) != (start, end) for s in overlapping)
+                ):
+                    dropped_period_long.append(row)
                 continue
             kept.append(
                 {
@@ -125,6 +197,8 @@ def clean_shifts(shift_rows, goalie_ids):
                 }
             )
         shifts.extend(kept)
+    dropped_period_long.sort(key=lambda r: (r["period"], r["team_id"], r["player_id"]))
+    shifts.extend(fill_goalie_gaps(shifts, dropped_period_long))
     shifts.sort(key=lambda s: (s["start"], s["end"], s["player_id"]))
     return shifts
 

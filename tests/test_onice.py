@@ -192,6 +192,73 @@ def test_plus_minus_ignores_penalty_shot_goals():
     assert onice.game_plus_minus(GAME, rows) == {}
 
 
+# ---- goalie gaps filled from dropped period-long rows -----------------------
+
+
+def goalie_spans(shifts, team):
+    return sorted((s["start"], s["end"]) for s in shifts if s["is_goalie"] and s["team_id"] == team)
+
+
+def test_uncovered_parts():
+    assert onice.uncovered_parts(2400, 3600, [(2400, 2636)]) == [(2636, 3600)]
+    assert onice.uncovered_parts(2400, 3600, [(2500, 2600), (3000, 3100)]) == [(2400, 2500), (2600, 3000), (3100, 3600)]
+    assert onice.uncovered_parts(2400, 3600, [(2400, 3600)]) == []
+    assert onice.uncovered_parts(2400, 3600, []) == [(2400, 3600)]
+
+
+def test_is_period_long():
+    assert onice.is_period_long(shift(10, 1, 2400, 3600, period=3))
+    assert onice.is_period_long(shift(10, 1, 3600, 3900, period=4))
+    assert not onice.is_period_long(shift(10, 1, 2400, 2636, period=3))
+    assert not onice.is_period_long(shift(10, 1, 2500, 3600, period=3))
+
+
+def test_gap_after_short_goalie_row_is_filled_from_dropped_period_long_row():
+    rows = [shift(10, 1, 2400, 2636, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2)]
+    cleaned = onice.clean_shifts(rows, GOALIES)
+    assert goalie_spans(cleaned, 1) == [(2400, 2636), (2636, 3600)]
+    filled = [s for s in cleaned if s["start"] == 2636][0]
+    assert filled["has_conflict"] and filled["is_goalie"]
+
+
+def test_only_period_long_rows_fill():
+    rows = [shift(10, 1, 2400, 2636, period=3, number=1), shift(10, 1, 2500, 3000, period=3, number=2)]
+    assert goalie_spans(onice.clean_shifts(rows, GOALIES), 1) == [(2400, 2636)]
+
+
+def test_skater_rows_never_fill():
+    rows = [shift(11, 1, 2400, 2436, period=3, number=1), shift(11, 1, 2400, 3600, period=3, number=2)]
+    assert [(s["start"], s["end"]) for s in onice.clean_shifts(rows, GOALIES)] == [(2400, 2436)]
+
+
+def test_other_goalie_of_the_team_covers_his_time():
+    rows = [
+        shift(10, 1, 2400, 3000, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2),
+        shift(11, 1, 3000, 3600, period=3, number=1),
+    ]
+    assert goalie_spans(onice.clean_shifts(rows, {10, 11}), 1) == [(2400, 3000), (3000, 3600)]
+
+
+def test_other_team_goalie_does_not_cover():
+    rows = [
+        shift(10, 1, 2400, 2636, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2),
+        shift(40, 2, 2400, 3600, period=3, number=1),
+    ]
+    cleaned = onice.clean_shifts(rows, GOALIES)
+    assert goalie_spans(cleaned, 1) == [(2400, 2636), (2636, 3600)]
+    assert goalie_spans(cleaned, 2) == [(2400, 3600)]
+
+
+def test_exact_copy_of_period_long_row_adds_nothing():
+    rows = [shift(10, 1, 2400, 3600, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2)]
+    assert goalie_spans(onice.clean_shifts(rows, GOALIES), 1) == [(2400, 3600)]
+
+
+def test_pulled_goalie_gap_stays_without_a_dropped_period_long_row():
+    rows = [shift(10, 1, 2400, 3500, period=3, number=1), shift(10, 1, 3560, 3600, period=3, number=2)]
+    assert goalie_spans(onice.clean_shifts(rows, GOALIES), 1) == [(2400, 3500), (3560, 3600)]
+
+
 # ---- output schemas ---------------------------------------------------------
 
 

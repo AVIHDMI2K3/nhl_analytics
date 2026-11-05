@@ -15,7 +15,7 @@ from the same games as the counts. A rate is None when its divisor is zero.
 
 from collections import defaultdict
 
-from season_totals import SUM_COLUMNS
+from season_totals import GOALIE_COLUMNS, SUM_COLUMNS
 
 PER_60 = {
     "goals_per_60": "goals",
@@ -28,6 +28,15 @@ PER_60 = {
     "takeaways_per_60": "takeaways",
 }
 RATE_COLUMNS = ["toi_per_game_seconds", "shooting_pct"] + list(PER_60)
+GOALIE_RATE_COLUMNS = [
+    "toi_per_game_seconds", "save_pct", "even_strength_save_pct", "power_play_save_pct",
+    "shorthanded_save_pct", "goals_against_avg", "shots_against_per_60",
+]
+STRENGTH_SAVE_PCT = {  # rate -> the strength's shots and goals against
+    "even_strength_save_pct": ("even_strength_shots_against", "even_strength_goals_against"),
+    "power_play_save_pct": ("power_play_shots_against", "power_play_goals_against"),
+    "shorthanded_save_pct": ("shorthanded_shots_against", "shorthanded_goals_against"),
+}
 TOTAL_TEAM = "TOT"
 
 
@@ -40,11 +49,30 @@ def add_rates(row):
     return row
 
 
-def build_season_display(totals, names, team_abbrevs):
-    """Display rows from player_season_totals rows.
+def add_goalie_rates(row):
+    """Save percentages are 0-100 like shooting_pct. Goals-against average is per 60 minutes."""
+    toi, shots = row["toi_seconds"], row["shots_against"]
+    row["toi_per_game_seconds"] = toi / row["games_played"] if row["games_played"] else None
+    row["save_pct"] = 100 * row["saves"] / shots if shots else None
+    for rate, (shots_column, goals_column) in STRENGTH_SAVE_PCT.items():
+        strength_shots = row[shots_column]
+        row[rate] = 100 * (strength_shots - row[goals_column]) / strength_shots if strength_shots else None
+    row["goals_against_avg"] = row["goals_against"] * 3600 / toi if toi else None
+    row["shots_against_per_60"] = shots * 3600 / toi if toi else None
+    return row
+
+
+def build_goalie_display(totals, names, team_abbrevs):
+    """Display rows from goalie_season_totals rows, combined like the skaters' (see build_season_display)."""
+    return build_season_display(totals, names, team_abbrevs, GOALIE_COLUMNS, add_goalie_rates)
+
+
+def build_season_display(totals, names, team_abbrevs, sum_columns=SUM_COLUMNS, add_rates_to=add_rates):
+    """Display rows from player_season_totals rows (or goalie_season_totals rows, see build_goalie_display).
 
     `names` maps player id to a full name (the boxscore's short name is used if missing) and
-    `team_abbrevs` maps team id to its abbreviation.
+    `team_abbrevs` maps team id to its abbreviation. `sum_columns` are the totals that are added up
+    on the combined row, `add_rates_to` works out the rates of a row.
     """
     by_player = defaultdict(list)
     for row in totals:
@@ -63,8 +91,8 @@ def build_season_display(totals, names, team_abbrevs):
                 "team_id": row["team_id"], "team": abbrev, "teams": ", ".join(abbrevs),
                 "games_played": row["games_played"],
             }
-            shown.update({column: row[column] for column in SUM_COLUMNS})
-            team_rows.append(add_rates(shown))
+            shown.update({column: row[column] for column in sum_columns})
+            team_rows.append(add_rates_to(shown))
         if len(team_rows) > 1:
             combined = {
                 "player_id": player_id, "name": name,
@@ -72,7 +100,7 @@ def build_season_display(totals, names, team_abbrevs):
                 "kind": "total", "team_id": None, "team": TOTAL_TEAM, "teams": ", ".join(abbrevs),
                 "games_played": sum(r["games_played"] for r in team_rows),
             }
-            combined.update({column: sum(r[column] for r in team_rows) for column in SUM_COLUMNS})
-            out.append(add_rates(combined))
+            combined.update({column: sum(r[column] for r in team_rows) for column in sum_columns})
+            out.append(add_rates_to(combined))
         out.extend(team_rows)
     return out

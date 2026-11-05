@@ -142,6 +142,41 @@ or `team`). Rates (time on ice per game, shooting percentage, per-60 of goals, a
 hits, blocks, giveaways, takeaways) are worked out on each row from its own totals. Written by
 `build_season_display.py`.
 
+## Goalie season totals (built)
+
+`goalie_season_totals`: one row per goalie and team, summed from the NHL boxscore, regular season only,
+written by `build_season_totals.py`. A goalie who dressed and did not play has a row with 0 games.
+
+| Column | Meaning |
+|---|---|
+| games_played | Games with time on ice |
+| games_started | Games he started (boxscore `starter`) |
+| wins, losses, ot_losses | From the boxscore decision: `W`, `L`, `O` (an overtime or shootout loss) |
+| shots_against, saves, goals_against | Boxscore totals |
+| even_strength_, power_play_, shorthanded_ + shots_against / goals_against | The same by strength. The boxscore gives shots by strength as "saves/shots" text; the shots are read from it |
+| shutouts | Games in which he played all of his team's goalie time, allowed no goal and did not lose in regulation (a win, or a shootout loss: shootout goals are not goals against) |
+| toi_seconds, pim | Time on ice (a shootout adds time) and penalty minutes |
+
+Checked against the NHL's goalie summary (`scripts/check_goalie_totals.py`): every count above, time on
+ice, save percentage and goals-against average match for every goalie in all three seasons. See
+`docs/data_notes.md` for the shutout rule.
+
+## Goalie season display (built)
+
+`goalie_season_display`: the fan-facing table from `goalie_season_totals`, laid out like the skater
+display (one row per goalie and team, plus a combined `TOT` row for a traded goalie). Rates are worked
+out on each row from its own totals:
+
+| Column | Meaning |
+|---|---|
+| save_pct | 100 x saves / shots against (0-100 scale). Also `even_strength_`, `power_play_` and `shorthanded_` versions from the strength totals |
+| goals_against_avg | goals against x 3600 / time on ice |
+| shots_against_per_60 | shots against x 3600 / time on ice |
+| toi_per_game_seconds | time on ice / games played |
+
+A rate is empty when its divisor is zero. High-danger save percentage and goals saved above expected
+need the xG model and are not built.
+
 ## Advanced on-ice stats (built)
 
 `player_season_advanced` and `team_season_advanced`, from the long base tables, for games with shift
@@ -170,6 +205,6 @@ gaps in `docs/data_notes.md` for the games covered.
 
 ## Still planned
 
-Team basic stats (record from the games table; power-play and penalty-kill percentages need power-play
-opportunities counted from the penalty events and checked), goalie season stats, xG and
-high-danger chances (after Phase 5), lines and pairs, pizza charts and similarity.
+Power-play and penalty-kill percentages (need power-play opportunities counted from the penalty events and
+checked), faceoff percentage, xG and high-danger chances including goalie quality-of-shot stats (after
+Phase 5), lines and pairs, pizza charts and similarity.

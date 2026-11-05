@@ -31,7 +31,6 @@ EVENT_COLUMNS = [
     "game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
     "shooting_player_id", "scoring_player_id", "goalie_in_net_id", "shot_type",
 ]
-PERIOD_STARTS = (0, 1200, 2400, 3600)
 
 
 def shooter_of(event):
@@ -56,11 +55,6 @@ def edge_distance(rows, second):
     """Seconds from `second` to the nearest start or end of any row (None if there are no rows)."""
     distances = [min(abs(second - row["start"]), abs(second - row["end"])) for row in rows]
     return min(distances) if distances else None
-
-
-def is_period_long(row):
-    """A row that starts at a period start and ends at the end of that period (or later)."""
-    return row["start"] in PERIOD_STARTS and row["end"] >= row["start"] + 300
 
 
 def tally_skater_games(shots, box_sog):

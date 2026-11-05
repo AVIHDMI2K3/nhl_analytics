@@ -84,3 +84,54 @@ def test_parquet_round_trip(tmp_path):
     table = pq.read_table(tmp_path / "t.parquet")
     assert table.column_names == build_season_display.SCHEMA.names
     assert table.column("shooting_pct").to_pylist() == [25.0]
+
+# ---- goalies ----------------------------------------------------------------
+
+
+def goalie_total(player=40, team=1, date="2025-10-10", games=10, **numbers):
+    row = {column: 0 for column in season_totals.GOALIE_COLUMNS}
+    row.update(numbers)
+    row.update(player_id=player, team_id=team, name=f"G{player}", position="G",
+               games_played=games, first_game_date=date)
+    return row
+
+
+def build_goalies(rows, names=None):
+    return season_display.build_goalie_display(rows, names or {}, ABBREVS)
+
+
+def test_goalie_rates_come_from_the_rows_own_totals():
+    row = build_goalies([goalie_total(
+        games=2, toi_seconds=7200, shots_against=60, saves=54, goals_against=6,
+        even_strength_shots_against=40, even_strength_goals_against=3,
+        power_play_shots_against=20, power_play_goals_against=3,
+    )])[0]
+    assert row["save_pct"] == 90.0 and row["goals_against_avg"] == 3.0 and row["shots_against_per_60"] == 30.0
+    assert row["even_strength_save_pct"] == 92.5 and row["power_play_save_pct"] == 85.0
+    assert row["shorthanded_save_pct"] is None and row["toi_per_game_seconds"] == 3600
+
+
+def test_goalie_rates_are_none_when_the_divisor_is_zero():
+    row = build_goalies([goalie_total(games=0)])[0]
+    assert row["save_pct"] is None and row["goals_against_avg"] is None and row["toi_per_game_seconds"] is None
+
+
+def test_a_traded_goalie_has_a_combined_row_with_save_percentage_from_the_added_totals():
+    rows = build_goalies([
+        goalie_total(team=1, date="2025-10-01", games=10, toi_seconds=36000, shots_against=300, saves=270, goals_against=30, wins=5),
+        goalie_total(team=2, date="2025-12-01", games=10, toi_seconds=36000, shots_against=100, saves=80, goals_against=20, wins=2),
+    ])
+    combined, first, second = rows
+    assert [(r["kind"], r["team"]) for r in rows] == [("total", "TOT"), ("team", "AAA"), ("team", "BBB")]
+    assert combined["wins"] == 7 and combined["games_played"] == 20 and combined["shots_against"] == 400
+    assert combined["save_pct"] == 87.5 and first["save_pct"] == 90.0 and second["save_pct"] == 80.0
+
+
+def test_goalie_parquet_round_trip(tmp_path):
+    rows = build_goalies([goalie_total(toi_seconds=3600, shots_against=30, saves=27, goals_against=3)])
+    for row in rows:
+        row["season"] = 2025
+    build_season_display.write_table(tmp_path / "g.parquet", rows, build_season_display.GOALIE_SCHEMA)
+    table = pq.read_table(tmp_path / "g.parquet")
+    assert table.column_names == build_season_display.GOALIE_SCHEMA.names
+    assert table.column("save_pct").to_pylist() == [90.0]

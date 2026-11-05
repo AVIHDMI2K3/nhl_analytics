@@ -4,7 +4,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from check_goal_shot_type_and_goalie_rows import edge_distance, fill_status, is_period_long, tally_skater_games  # noqa: E402
+from check_goal_shot_type_and_goalie_rows import edge_distance, fill_status, tally_skater_games  # noqa: E402
 
 
 def row(start, end):
@@ -26,13 +26,6 @@ def test_fill_status_kept_fillable_uncovered():
     assert fill_status(kept, dropped, 2777) == "fillable"
     assert fill_status(kept, [], 2777) == "uncovered"
     assert fill_status([], dropped, 3700) == "uncovered"
-
-
-def test_is_period_long():
-    assert is_period_long(row(2400, 3600))
-    assert is_period_long(row(3600, 3900))
-    assert not is_period_long(row(2400, 2636))
-    assert not is_period_long(row(3455, 3471))
 
 
 def test_tally_separates_goal_without_shot_type():

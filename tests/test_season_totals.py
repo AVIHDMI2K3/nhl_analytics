@@ -1,4 +1,4 @@
-"""Tests for the fan-facing season table. Made-up totals, no real data."""
+"""Tests for the season totals from the boxscore (skaters and goalies). Made-up rows, no real data."""
 
 import sys
 from pathlib import Path
@@ -9,78 +9,158 @@ sys.path.insert(
     0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
 )
 
-import build_season_display  # noqa: E402
-import season_display  # noqa: E402
+import build_season_totals  # noqa: E402
 import season_totals  # noqa: E402
 
+REGULAR = {1, 2, 3, 4}
+DATES = {1: "2025-10-01", 2: "2025-10-05", 3: "2025-12-01", 4: "2025-12-05"}
 
-def total(player=7, team=1, date="2025-10-10", position="C", games=10, **numbers):
+
+def skater(game=1, player=7, team=1, toi=1000, position="C", **numbers):
     row = {column: 0 for column in season_totals.SUM_COLUMNS}
     row.update(numbers)
-    row.update(player_id=player, team_id=team, name=f"P{player}", position=position,
-               games_played=games, first_game_date=date)
+    row.update(game_id=game, player_id=player, team_id=team, player_group="forwards", name=f"S{player}",
+               position=position, toi_seconds=toi)
     return row
 
 
-ABBREVS = {1: "AAA", 2: "BBB", 3: "CCC"}
-
-
-def build(rows, names=None):
-    return season_display.build_season_display(rows, names or {}, ABBREVS)
-
-
-def test_a_player_with_one_team_has_one_team_row():
-    rows = build([total(goals=5, toi_seconds=7200)])
-    assert [(r["kind"], r["team"], r["teams"]) for r in rows] == [("team", "AAA", "AAA")]
-
-
-def test_a_traded_player_has_a_combined_row_then_each_team_in_order_joined():
-    rows = build([
-        total(team=2, date="2025-12-01", games=6, goals=2, toi_seconds=3600),
-        total(team=1, date="2025-10-10", games=10, goals=3, toi_seconds=7200),
-    ])
-    assert [(r["kind"], r["team"]) for r in rows] == [("total", "TOT"), ("team", "AAA"), ("team", "BBB")]
-    combined = rows[0]
-    assert combined["teams"] == "AAA, BBB" and combined["games_played"] == 16 and combined["goals"] == 5
-    assert combined["toi_seconds"] == 10800 and combined["team_id"] is None
-
-
-def test_three_teams_give_three_team_rows_and_one_combined_row():
-    rows = build([total(team=t, date=f"2025-1{t}-01", goals=1) for t in (1, 2, 3)])
-    assert [r["team"] for r in rows] == ["TOT", "AAA", "BBB", "CCC"]
-    assert rows[0]["goals"] == 3
-
-
-def test_rates_use_each_rows_own_totals():
-    rows = build([
-        total(team=1, date="2025-10-01", games=10, goals=10, sog=40, points=10, toi_seconds=7200),
-        total(team=2, date="2025-12-01", games=10, goals=0, sog=10, points=0, toi_seconds=7200),
-    ])
-    combined, first, second = rows
-    assert first["goals_per_60"] == 5.0 and second["goals_per_60"] == 0.0
-    assert combined["goals_per_60"] == 10 * 3600 / 14400  # from the combined totals, not an average of rates
-    assert first["shooting_pct"] == 25.0 and combined["shooting_pct"] == 20.0
-    assert first["toi_per_game_seconds"] == 720
-
-
-def test_rates_are_none_when_the_divisor_is_zero():
-    row = build([total(games=0, toi_seconds=0, sog=0, goals=0)])[0]
-    assert row["goals_per_60"] is None and row["shooting_pct"] is None and row["toi_per_game_seconds"] is None
-
-
-def test_full_name_is_used_when_known_and_position_of_the_combined_row_follows_games():
-    rows = build(
-        [total(team=1, date="2025-10-01", games=3, position="L"), total(team=2, date="2025-11-01", games=9, position="C")],
-        names={7: "Seven Player"},
+def goalie(game=1, player=40, team=1, toi=3600, starter=True, decision=None, against=0,
+           ev=(0, 0), pp=(0, 0), sh=(0, 0), shots=0, **extra):
+    """A goalie row. `ev`, `pp` and `sh` are (saves, shots) for each strength."""
+    row = {column: 0 for column in season_totals.GOALIE_SUM_COLUMNS}
+    row.update(
+        game_id=game, player_id=player, team_id=team, player_group="goalies", name=f"G{player}", position="G",
+        toi_seconds=toi, starter=starter, decision=decision, goals_against=against, shots_against=shots,
+        saves=shots - against,
+        even_strength_shots_against=f"{ev[0]}/{ev[1]}", power_play_shots_against=f"{pp[0]}/{pp[1]}",
+        shorthanded_shots_against=f"{sh[0]}/{sh[1]}",
     )
-    assert {r["name"] for r in rows} == {"Seven Player"} and rows[0]["position"] == "C"
+    row.update(extra)
+    return row
 
 
-def test_parquet_round_trip(tmp_path):
-    rows = build([total(goals=1, sog=4, toi_seconds=600)])
-    for row in rows:
-        row["season"] = 2025
-    build_season_display.write_table(tmp_path / "t.parquet", rows)
-    table = pq.read_table(tmp_path / "t.parquet")
-    assert table.column_names == build_season_display.SCHEMA.names
-    assert table.column("shooting_pct").to_pylist() == [25.0]
+# ---- skaters ----------------------------------------------------------------
+
+
+def test_skaters_are_summed_and_goalies_and_other_game_types_are_left_out():
+    rows = [
+        skater(game=1, goals=1, assists=2, toi=1000),
+        skater(game=2, goals=2, toi=1100),
+        skater(game=9, goals=5),  # not a regular-season game with a boxscore
+        goalie(game=1),
+    ]
+    out = season_totals.build_player_season_totals(rows, REGULAR, DATES)
+    assert len(out) == 1
+    assert out[0]["goals"] == 3 and out[0]["assists"] == 2 and out[0]["toi_seconds"] == 2100
+    assert out[0]["games_played"] == 2 and out[0]["first_game_date"] == "2025-10-01"
+
+
+def test_games_played_counts_only_games_with_time_on_ice_and_none_counts_as_zero():
+    rows = [skater(game=1, toi=900), skater(game=2, toi=0), skater(game=3, toi=None, goals=None)]
+    out = season_totals.build_player_season_totals(rows, REGULAR, DATES)[0]
+    assert out["games_played"] == 1 and out["goals"] == 0 and out["toi_seconds"] == 900
+
+
+def test_a_traded_skater_has_one_row_per_team():
+    rows = [skater(game=1, team=1, goals=1), skater(game=3, team=2, goals=4)]
+    out = season_totals.build_player_season_totals(rows, REGULAR, DATES)
+    assert [(r["team_id"], r["goals"], r["first_game_date"]) for r in out] == [(1, 1, "2025-10-01"), (2, 4, "2025-12-01")]
+
+
+def test_the_position_is_the_one_most_often_listed():
+    rows = [skater(game=1, position="L"), skater(game=2, position="C"), skater(game=3, position="C")]
+    assert season_totals.build_player_season_totals(rows, REGULAR, DATES)[0]["position"] == "C"
+
+
+# ---- goalies ----------------------------------------------------------------
+
+
+def test_shots_in_reads_the_saves_over_shots_text():
+    assert season_totals.shots_in("15/17") == 17
+    assert season_totals.shots_in("0/0") == 0
+    for bad in (None, "", "15", "a/b", 17):
+        assert season_totals.shots_in(bad) == 0
+
+
+def test_goalie_totals_sum_games_starts_decisions_and_shots():
+    rows = [
+        goalie(game=1, decision="W", against=2, shots=19, ev=(15, 17), pp=(2, 2)),
+        goalie(game=2, decision="L", against=3, shots=30, ev=(22, 25), pp=(3, 4), sh=(2, 1 + 0)),
+        goalie(game=3, decision="O", against=1, shots=10, ev=(9, 10)),
+        goalie(game=4, starter=False, toi=0),  # dressed, did not play
+        skater(game=1),
+    ]
+    out = season_totals.build_goalie_season_totals(rows, REGULAR, DATES)
+    assert len(out) == 1
+    row = out[0]
+    assert row["games_played"] == 3 and row["games_started"] == 3 and row["position"] == "G"
+    assert (row["wins"], row["losses"], row["ot_losses"]) == (1, 1, 1)
+    assert row["shots_against"] == 59 and row["goals_against"] == 6 and row["saves"] == 53
+    assert row["even_strength_shots_against"] == 52 and row["power_play_shots_against"] == 6
+    assert row["shorthanded_shots_against"] == 1
+    assert row["toi_seconds"] == 3 * 3600 and row["first_game_date"] == "2025-10-01"
+
+
+def test_a_goalie_who_did_not_play_has_zero_games_played_but_still_a_row():
+    out = season_totals.build_goalie_season_totals([goalie(game=1, starter=False, toi=0)], REGULAR, DATES)
+    assert out[0]["games_played"] == 0 and out[0]["games_started"] == 0 and out[0]["first_game_date"] is None
+
+
+def test_a_shutout_needs_all_of_the_teams_goalie_time_and_no_goals_against():
+    rows = [
+        goalie(game=1, against=0, shots=20, decision="W"),  # won, played everything, nothing allowed: a shutout
+        goalie(game=2, against=1, shots=20),  # allowed one
+        goalie(game=3, player=40, toi=2400, against=0, shots=10, decision="W"),  # relieved, nothing allowed: not a shutout
+        goalie(game=3, player=41, toi=1200, starter=False, against=0, shots=8, decision="W"),
+        goalie(game=4, player=42, against=0, shots=20, decision="L"),  # lost in regulation: not a shutout
+        goalie(game=4, player=43, team=2, toi=3900, against=0, shots=20, decision="O"),  # lost the shootout of a 0-0 game: a shutout
+    ]
+    out = {r["player_id"]: r for r in season_totals.build_goalie_season_totals(rows, REGULAR, DATES)}
+    assert out[40]["shutouts"] == 1 and out[41]["shutouts"] == 0
+    assert out[42]["shutouts"] == 0 and out[43]["shutouts"] == 1
+
+
+def test_a_shutout_in_overtime_counts_when_he_played_all_of_the_teams_time():
+    rows = [goalie(game=1, toi=3900, against=0, shots=25, decision="W")]
+    assert season_totals.build_goalie_season_totals(rows, REGULAR, DATES)[0]["shutouts"] == 1
+
+
+def test_a_traded_goalie_has_one_row_per_team_and_the_other_team_is_not_mixed_in():
+    rows = [
+        goalie(game=1, team=1, decision="W", shots=20),
+        goalie(game=1, player=50, team=2, decision="L", shots=30),  # the opponent's goalie
+        goalie(game=3, team=2, decision="L", shots=25),
+    ]
+    out = season_totals.build_goalie_season_totals(rows, REGULAR, DATES)
+    mine = [(r["team_id"], r["wins"], r["losses"], r["shots_against"]) for r in out if r["player_id"] == 40]
+    assert mine == [(1, 1, 0, 20), (2, 0, 1, 25)]
+
+
+def test_goalie_games_outside_the_regular_season_are_left_out():
+    out = season_totals.build_goalie_season_totals([goalie(game=9, decision="W", shots=30)], REGULAR, DATES)
+    assert out == []
+
+
+# ---- the tables on disk -----------------------------------------------------
+
+
+def test_parquet_round_trip_of_both_tables(tmp_path):
+    skater_rows = season_totals.build_player_season_totals([skater(goals=2)], REGULAR, DATES)
+    goalie_rows = season_totals.build_goalie_season_totals([goalie(decision="W", against=1, shots=11)], REGULAR, DATES)
+    for rows in (skater_rows, goalie_rows):
+        for row in rows:
+            row["season"] = 2025
+    build_season_totals.write_table(tmp_path / "s.parquet", skater_rows)
+    build_season_totals.write_table(tmp_path / "g.parquet", goalie_rows, build_season_totals.GOALIE_SCHEMA)
+    assert pq.read_table(tmp_path / "s.parquet").column_names == build_season_totals.SCHEMA.names
+    table = pq.read_table(tmp_path / "g.parquet")
+    assert table.column_names == build_season_totals.GOALIE_SCHEMA.names
+    assert table.column("wins").to_pylist() == [1] and table.column("shots_against").to_pylist() == [11]
+
+
+def test_the_boxscore_columns_read_have_no_duplicates():
+    columns = build_season_totals.BOX_COLUMNS
+    assert len(columns) == len(set(columns))
+    assert {"starter", "decision", "even_strength_shots_against", "goals_against"} <= set(columns)
+    # worked-out columns are not in the boxscore and must not be asked for
+    assert not set(season_totals.GOALIE_COUNT_COLUMNS) & set(columns)

@@ -32,7 +32,7 @@ Data lives in Parquet files queried with DuckDB. The app starts as Streamlit.
 - **raw:** each API response saved exactly as received, gzipped, and never edited.
 - **staging:** the raw responses parsed into flat tables (games, players, events, shifts, boxscore players).
 - **intermediate:** staging tables joined into who was on the ice for every event, cleaned shifts, and each skater's plus/minus from that.
-- **metrics:** shot attempts, stints (stretches of play with a fixed lineup), long base tables of counts and seconds by strength and game state, skater season totals from the boxscore, and the fan-facing season tables for skaters and teams. Definitions are in [`docs/metrics.md`](docs/metrics.md).
+- **metrics:** shot attempts, stints (stretches of play with a fixed lineup), long base tables of counts and seconds by strength and game state, skater and goalie season totals from the boxscore, and the fan-facing season tables for skaters, goalies and teams. Definitions are in [`docs/metrics.md`](docs/metrics.md).
 - **analysis, app:** planned (see the roadmap).
 
 Data comes from the NHL's unofficial, undocumented services, so they can change without notice. This project is not affiliated with or endorsed by the NHL. Requests are paced at one per second with a descriptive User-Agent.
@@ -73,6 +73,7 @@ src/nhl_pipeline/ingest/
     ingest_season.py    download one regular season (command-line tool)
     staging.py          parsers: raw responses -> rows (no file or network access)
     stage_season.py     build the staging tables for one season (command-line tool)
+    ingest_reference.py download the NHL's own season reports (skater time on ice, goalie summary) used for checks
     probe.py            Phase 0 script: fetch one game and print the response shapes
 src/nhl_pipeline/transform/
     onice.py            who was on the ice for each event (pure logic, no file access)
@@ -81,8 +82,8 @@ src/nhl_pipeline/transform/
     stints.py, build_stints.py                 stretches of a period with a fixed lineup, and each side's strength
     base_tables.py, build_base_tables.py       long tables of seconds and attempt counts by player, game and state
     event_stats.py                             assists, hits, giveaways, takeaways, faceoffs, penalties by state
-    season_totals.py, build_season_totals.py   skater season totals from the boxscore
-    season_display.py, build_season_display.py fan-facing skater season table (traded players get a combined row)
+    season_totals.py, build_season_totals.py   skater and goalie season totals from the boxscore
+    season_display.py, build_season_display.py fan-facing skater and goalie season tables (traded players get a combined row)
     advanced_stats.py, build_player_advanced.py, build_team_advanced.py   Corsi, Fenwick, shots, goals, rates, relative stats
     team_basic.py, build_team_basic.py         team record, goals, shots, hits and the like
 scripts/
@@ -93,7 +94,7 @@ scripts/
     find_pm_goals.py    which goal explains a plus/minus difference with the boxscore
     probe_goal_boundary.py  compare four boundary rules for goals against the boxscore plus/minus
     check_stints.py, test_strength_toi.py   how strength is decided, checked against the NHL's time on ice by strength
-    check_base_tables.py, check_season_totals.py, check_player_advanced.py, check_team_advanced.py, check_team_basic.py
+    check_base_tables.py, check_season_totals.py, check_goalie_totals.py, check_player_advanced.py, check_team_advanced.py, check_team_basic.py
                         checks of each metrics table (exact identities and comparisons with the NHL's numbers)
     compare_boxscore_to_nhl.py   compare the boxscore with the NHL's official event summary pages for a sample of games
     diagnose_shots_against_gap.py, diagnose_boxscore_vs_pbp.py   investigations of small differences between sources
@@ -106,7 +107,8 @@ data/                   not tracked by git
     staging/            season=2023/events.parquet, shifts.parquet ...
     intermediate/       season=2023/event_on_ice.parquet, shifts_clean.parquet ...
     metrics/            season=2023/shot_attempts.parquet, stints.parquet, player_game_strength.parquet,
-                        player_season_totals.parquet, player_season_display.parquet, player_season_advanced.parquet,
+                        player_season_totals.parquet, player_season_display.parquet, goalie_season_totals.parquet,
+                        goalie_season_display.parquet, player_season_advanced.parquet,
                         team_season_advanced.parquet, team_season_basic.parquet ...
     logs/               ingestion_log.jsonl, staging_report_2023.json, onice_report_2023.json, base_tables_report_2023.json
 ```
@@ -189,6 +191,8 @@ python src/nhl_pipeline/transform/build_team_basic.py --season 2023
 | `player_game_strength`, `team_game_strength` | player (or team), game and state | seconds and attempt counts; every season total is a sum of these rows |
 | `player_season_totals` | skater and team | season totals from the boxscore, checked against the NHL's skater report |
 | `player_season_display` | skater and team, plus a combined row for a traded player | the basic stats and per-60 rates for fans |
+| `goalie_season_totals` | goalie and team | games played and started, record, shots, saves, goals against (also by strength), shutouts, from the boxscore; matches the NHL's goalie summary for every goalie |
+| `goalie_season_display` | goalie and team, plus a combined row for a traded goalie | save percentage (also by strength), goals-against average, shots against per 60 |
 | `player_season_advanced`, `team_season_advanced` | player (or team) and situation | Corsi, Fenwick, shots and goals for and against, percentages, per-60 rates and, for players, relative stats, for all situations, even strength, 5v5, power play and shorthanded |
 | `team_season_basic` | team | record, points, goals, shots, hits, blocks, giveaways, takeaways and penalty minutes |
 
@@ -202,7 +206,7 @@ Each table has a check script in `scripts/` (for example `python scripts/check_t
 | 1 | Raw ingestion of a regular season | Done for 2023-24, 2024-25 and 2025-26 |
 | 2 | Staging tables | Done for all three seasons. Goals counted from events match the final score in all 3,936 games, and player goals, assists, hits, giveaways and takeaways match the boxscore exactly |
 | 3 | On-ice join of events to shifts, strength states | Done for all three seasons. On-ice counts agree with `situationCode` for 99.3-99.4% of events, and our plus/minus matches the boxscore for 99.9% of skater-games |
-| 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice). Still to build: goalie season stats, power-play and penalty-kill percentages, faceoff percentage |
+| 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Still to build: power-play and penalty-kill percentages, faceoff percentage, high-danger goalie stats (after the xG model) |
 | 5 | Validation against boxscores and Natural Stat Trick | Planned |
 | 6 | Line and defense-pair analysis | Planned |
 | 7 | Player comparison (pizza charts) and similarity | Planned |

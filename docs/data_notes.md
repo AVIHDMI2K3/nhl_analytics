@@ -152,7 +152,58 @@ check from memory (2023-24 and 2024-25).
   a per-team comparison (exact for 17 of 32 teams, 1 to 4 off for the rest) are these small
   differences adding up.
 - **Power-play goals.** Skaters' power-play goals exceed the goalies' power-play goals against by
-  7, 9 and 8 over the three seasons. Cause not found.
+  7, 9 and 8 over the three seasons. The cause is goals scored into an empty net, which are charged
+  to no goalie (see "Power play and shorthanded").
+
+## Power play and shorthanded
+
+`player_season_special_teams` takes the strength of each goal and shot from the NHL's `situationCode` on
+the event (every game) and time on ice and on-ice goals from our shifts (games with shift data only; 57
+games in 2024 have none). Checked with `scripts/check_player_special_teams.py` against the NHL's skater
+power-play and penalty-kill reports, and with `scripts/diagnose_special_teams_goals.py` against the
+goalies' boxscore numbers game by game.
+
+- **Why the code for goals and shots.** Strength from the shifts is wrong for a few goals a season: in
+  seven goals we inspected (`scripts/inspect_goal_strength.py`) the shifts showed an extra or missing
+  skater at the goal's second (overtime line changes, a 7th skater in one game), or put the goal on the
+  wrong side of a penalty expiring at that second (the NHL counts the power play from the penalty clock,
+  not from who is on the ice yet), or showed six real skaters for a team that had pulled its goalie. The
+  code was right in all seven. Over all goals with a goalie in net the code agrees with the goalies'
+  boxscore numbers in every team-game for power-play goals (2,624, 2,510 and 2,624 team-games) and in all
+  but 0, 1 and 2 for shorthanded goals; the shifts were off in 16, 12 and 10 power-play team-games and 4, 2
+  and 3 shorthanded ones.
+- **Against the NHL's player reports** (strength from the code): power-play goals, assists, primary and
+  secondary assists and points match for every skater in all three seasons (924, 920 and 940), including
+  2024 because the code does not need shifts; shorthanded assists match for every skater and shorthanded
+  goals for all but 0, 1 and 2 skaters (one off). Shots on goal match for 99% of skaters on the power play
+  (916 of 924, 915 of 920, 935 of 940) and 98-99% shorthanded. Totals are equal or within a few.
+  Strength from the shifts was exact for only 91-97% (and not for skaters in the 57 games).
+- **Boxscore power-play goals** match the NHL's skater report for every skater in all three seasons.
+- **Goalies' numbers leave out empty-net goals.** A goal into an empty net is charged to no goalie, but
+  the NHL's skater reports and the boxscore's skater goals count it. This is the cause of the skaters'
+  power-play goals exceeding the goalies' power-play goals against by 7, 9 and 8 (see "Team basic stats"),
+  and of 26, 28 and 27 shorthanded goals a season that no goalie has.
+- **Time on ice by strength per skater** comes from the shifts and matches the NHL exactly for only part of
+  the skaters (power play 322 of 924, shorthanded 363 of 924 in 2023; 519 and 588 of 940 in 2025), with
+  gaps up to about 160 s. In total ours is 0.2-0.3% high (see "Time on ice"). Cause not found.
+- **On-ice goals for and against** (`gf`, `ga`): the skaters credited come from the shifts, but the state
+  (power play, shorthanded, even strength) each goal and shot is counted under now comes from the situation
+  code (`base_tables.py`; the shift state is still used for seconds). This changed 0.1-0.2% of attempts
+  (266, 180 and 173 in 2023-2025). Compared as whole goals with the NHL's (per 60 x its seconds / 3600) by
+  `scripts/diagnose_on_ice_membership.py`, for skaters with time on ice (in 2024 only the 260 with shift
+  data in every game): power-play goals for match for 849 of 849 (2023), 194 of 194 (2024) and 833 of 835
+  (2025); penalty-kill goals against for 781 of 788, 172 of 172 and 806 of 811. All 14 differences are one
+  goal, ours the higher. For 12 of them a goal scored at a line change could account for the gap (not proven,
+  since most matching skaters also have line-change goals); for one skater (2025 power play) no such goal
+  exists. Earlier figures of 64-86% came from a check that counted skaters with no time on ice as
+  mismatches, and were wrong.
+- **Individual shot attempts** are not in the special-teams table. On the power play the NHL's count sits
+  between our Fenwick (without blocks) and our Corsi, about 2% above Fenwick; shorthanded it matches our
+  Corsi for 94% of skaters. The rule is not understood. They stay in the advanced table with our definition.
+- **Per-60 rates** of goals, assists, points and shots use only the games with shift data (the
+  `included_*` columns), so a count and a time cover the same games; shooting percentage uses all games.
+- **Remaining disagreement:** shorthanded goals where the code says even strength (1 in 2024, 2 in 2025);
+  not looked at.
 
 ## Goalie season stats
 

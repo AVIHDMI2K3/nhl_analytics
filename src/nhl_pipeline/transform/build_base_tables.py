@@ -47,7 +47,7 @@ EVENT_COLUMNS = [
 ]
 ATTEMPT_COLUMNS = [
     "game_id", "event_id", "game_seconds", "attempt_type", "shooter_id", "blocker_id",
-    "blocker_is_teammate", "is_home",
+    "blocker_is_teammate", "is_home", "skaters_for", "skaters_against", "goalie_for", "goalie_against",
 ]
 
 STATE_TYPES = [("strength", pa.string())] + [(name, pa.int64()) for name in STATE_COLUMNS[1:]]
@@ -133,6 +133,8 @@ def main():
     print("Player seconds by strength: " + ", ".join(f"{s} {seconds[s]}" for s in STRENGTHS))
     print("Attempts counted: " + ", ".join(f"{k} {counted[k]}" for k in KINDS))
     print(f"Attempts outside every stint (not counted): {notes['attempts_outside_stints']}")
+    print(f"Attempts counted under the situationCode state: {notes['state_from_code']}, "
+          f"of which different from the stint's state: {notes['state_differs_from_stint']}")
     print(f"Shooter not on the ice in his stint (credited anyway): {notes['shooter_not_on_ice']}")
     print(f"Goalie as shooter (counted for the team and skaters, no skater row): {notes['goalie_shooter']}")
     print(f"Goalies named in other events (no skater row): {notes['goalie_event']}")

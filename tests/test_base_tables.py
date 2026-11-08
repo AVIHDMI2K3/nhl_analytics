@@ -95,6 +95,43 @@ def test_power_play_attempt_uses_each_sides_own_state():
     assert find(players, player_id=11, strength="sh")["against_sog"] == 1
 
 
+def coded(kind, time, sf, sa, gf=1, ga=1, **kw):
+    return {**attempt(kind, time, **kw), "skaters_for": sf, "skaters_against": sa,
+            "goalie_for": gf, "goalie_against": ga}
+
+
+def test_state_comes_from_the_situation_code_and_players_from_the_stint():
+    # the shifts say 5v5, the code says the home team is on a 5v4 power play
+    players, teams, notes = tables(ice(0, 60), [coded("goal", 30, 5, 4)])
+    row = find(players, player_id=12, strength="pp")
+    assert row["for_goal"] == 1 and row["seconds"] == 0  # counted under the code's state, no time there
+    assert find(players, player_id=12, strength="ev")["seconds"] == 60
+    assert find(players, player_id=21, strength="sh")["against_goal"] == 1
+    assert find(players, player_id=11, strength="pp")["ind_goal"] == 1
+    assert find(teams, team_id=1, strength="pp")["for_goal"] == 1
+    assert find(teams, team_id=2, strength="sh")["against_goal"] == 1
+    assert notes["state_from_code"] == 1 and notes["state_differs_from_stint"] == 1
+
+
+def test_a_matching_code_changes_nothing_and_is_not_counted_as_different():
+    players, _, notes = tables(ice(0, 60), [coded("shot-on-goal", 30, 5, 5)])
+    assert find(players, player_id=12, strength="ev")["for_sog"] == 1
+    assert notes["state_from_code"] == 1 and notes["state_differs_from_stint"] == 0
+
+
+def test_a_pulled_goalie_in_the_code_is_even_strength_with_six_skaters():
+    _, teams, _ = tables(ice(0, 60), [coded("shot-on-goal", 30, 6, 5, gf=0)])
+    row = find(teams, team_id=1, for_sog=1)
+    assert (row["strength"], row["skaters_for"], row["goalies_for"]) == ("ev", 6, 0)
+
+
+def test_strength_from_counts():
+    assert base_tables.strength_from_counts(5, 1, 4, 1) == "pp"
+    assert base_tables.strength_from_counts(4, 1, 5, 1) == "sh"
+    assert base_tables.strength_from_counts(6, 0, 5, 1) == "ev"
+    assert base_tables.strength_from_counts(5, 1, 6, 0) == "ev"  # the other team has pulled its goalie
+
+
 def test_blocks_made_only_when_the_blocker_is_on_the_other_team():
     attempts = [
         attempt("blocked-shot", 10, blocker=21, teammate_block=False),

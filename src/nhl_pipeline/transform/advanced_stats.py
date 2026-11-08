@@ -109,8 +109,12 @@ def add_rates(row):
     return row
 
 
-def build_advanced_display(totals, games, season_rows, names, team_abbrevs):
+def build_advanced_display(totals, games, season_rows, names, team_abbrevs,
+                           situations=SITUATIONS, columns=COUNT_COLUMNS, add_rates_to=add_rates):
     """Fan-facing rows: one per player, team (or combined) and situation.
+
+    `situations`, `columns` and `add_rates_to` default to the advanced on-ice ones; special_teams.py
+    passes its own to get the same layout (traded players, games played and included) for its table.
 
     `season_rows` are player_season_totals rows (identity, boxscore games played, the date he
     joined each team). A traded player gets a combined row per situation, then one per team in
@@ -128,7 +132,7 @@ def build_advanced_display(totals, games, season_rows, names, team_abbrevs):
         abbrevs = [team_abbrevs.get(r["team_id"], str(r["team_id"])) for r in teams]
         team_rows = []
         for row, abbrev in zip(teams, abbrevs):
-            for situation in SITUATIONS:
+            for situation in situations:
                 counts = totals.get((player_id, row["team_id"], situation))
                 if counts is None:
                     continue
@@ -137,10 +141,10 @@ def build_advanced_display(totals, games, season_rows, names, team_abbrevs):
                     "team_id": row["team_id"], "team": abbrev, "teams": ", ".join(abbrevs), "situation": situation,
                     "games_played": row["games_played"], "games_included": games[(player_id, row["team_id"])],
                 }
-                shown.update({column: counts[column] for column in COUNT_COLUMNS})
-                team_rows.append(add_rates(shown))
+                shown.update({column: counts[column] for column in columns})
+                team_rows.append(add_rates_to(shown))
         if len({r["team_id"] for r in team_rows}) > 1:
-            for situation in SITUATIONS:
+            for situation in situations:
                 parts = [r for r in team_rows if r["situation"] == situation]
                 if not parts:
                     continue
@@ -152,8 +156,8 @@ def build_advanced_display(totals, games, season_rows, names, team_abbrevs):
                     "games_played": sum(r["games_played"] for r in teams),
                     "games_included": sum(games[(player_id, r["team_id"])] for r in teams if (player_id, r["team_id"]) in games),
                 }
-                combined.update({column: sum(r[column] for r in parts) for column in COUNT_COLUMNS})
-                out.append(add_rates(combined))
+                combined.update({column: sum(r[column] for r in parts) for column in columns})
+                out.append(add_rates_to(combined))
         out.extend(team_rows)
     return out
 

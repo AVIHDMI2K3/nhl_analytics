@@ -28,7 +28,12 @@ miss or block:
   blocks_made                  shots blocked by the player, not counting a block of a
                                teammate's shot
 An attempt belongs to the stint it falls in, with the same boundary rule as Phase 3:
-goals are end-inclusive, everything else start-inclusive.
+goals are end-inclusive, everything else start-inclusive. The stint decides WHO was on the
+ice (the skaters credited); the state (strength and skater counts) the attempt is counted
+under comes from the NHL situationCode on the attempt when the attempt row has it
+(skaters_for, skaters_against, goalie_for, goalie_against, from the shooting team's view),
+because the shift-based strength is a second or two off at line changes and penalty expiries.
+Seconds always use the stint's own state. Without those fields the stint's state is used.
 """
 
 from collections import Counter, defaultdict
@@ -52,6 +57,30 @@ PLAYER_COUNT_COLUMNS = (
 )
 
 
+CODE_FIELDS = ("skaters_for", "skaters_against", "goalie_for", "goalie_against")
+MIRROR = {"pp": "sh", "sh": "pp", "ev": "ev"}
+
+
+def strength_from_counts(skaters_for, goalies_for, skaters_against, goalies_against):
+    """'pp', 'sh' or 'ev' for the "for" side. A pulled goalie (0 goalies) is an extra attacker and
+    does not count as a skater, as in the NHL's power-play goal rule."""
+    mine = skaters_for - (1 if goalies_for == 0 else 0)
+    theirs = skaters_against - (1 if goalies_against == 0 else 0)
+    return "pp" if mine > theirs else "sh" if mine < theirs else "ev"
+
+
+def code_states(attempt):
+    """(shooting side state, defending side state) from the situationCode counts on a shot_attempts row,
+    each as (strength, skaters_for, skaters_against, goalies_for, goalies_against), or None when the
+    row has no counts."""
+    values = [attempt.get(name) for name in CODE_FIELDS]
+    if any(value is None for value in values):
+        return None
+    sf, sa, gf, ga = values
+    strength = strength_from_counts(sf, gf, sa, ga)
+    return (strength, sf, sa, gf, ga), (MIRROR[strength], sa, sf, ga, gf)
+
+
 def build_game_tables(game, stints, attempts, events=(), records=None):
     """Player and team rows for one game, plus a Counter of things worth reporting.
 
@@ -61,7 +90,9 @@ def build_game_tables(game, stints, attempts, events=(), records=None):
     If `records` is a list, one dict is added for each goalie_shooter and each
     shooter_not_on_ice, so the cases can be looked at later.
     Notes: attempts_outside_stints (not counted anywhere), shooter_not_on_ice (the
-    shooter's own attempt is still credited to him), goalie_shooter (a goalie is the
+    shooter's own attempt is still credited to him), state_from_code and
+    state_differs_from_stint (attempts counted under the situationCode's state, and how many of
+    them differ from the stint's state), goalie_shooter (a goalie is the
     shooter, so the attempt counts for the team and the skaters on the ice but the goalie
     gets no row in the skater table).
     """
@@ -89,6 +120,12 @@ def build_game_tables(game, stints, attempts, events=(), records=None):
         shooting = "home" if attempt["is_home"] else "away"
         defending = other_side(shooting)
         shooting_state, defending_state = side_state(stint, shooting), side_state(stint, defending)
+        from_code = code_states(attempt)
+        if from_code is not None:
+            notes["state_from_code"] += 1
+            if from_code != (shooting_state, defending_state):
+                notes["state_differs_from_stint"] += 1
+            shooting_state, defending_state = from_code
         shooting_team, defending_team = team_ids[shooting], team_ids[defending]
 
         teams[(shooting_team, *shooting_state)][f"for_{kind}"] += 1

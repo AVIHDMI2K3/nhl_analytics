@@ -10,6 +10,11 @@ Saves, for the regular season, each response exactly as received, in data/raw/se
     goalie_summary.json.gz     one row per goalie: games played and started, wins, losses, overtime
                                losses, shots against, saves, goals against, save percentage,
                                goals-against average, shutouts, time on ice
+    skater_faceoffs.json.gz    one row per skater: faceoffs won and lost, in total and by strength and zone
+    skater_powerplay.json.gz   one row per skater: power-play time on ice, goals, assists, points
+    skater_penaltykill.json.gz one row per skater: penalty-kill time on ice, shorthanded goals and points
+    team_powerplay.json.gz     one row per team: power-play opportunities, goals and percentage
+    team_penaltykill.json.gz   one row per team: times shorthanded, goals against and percentage
 """
 
 import argparse
@@ -25,6 +30,11 @@ RAW_ROOT = REPO_ROOT / "data" / "raw"
 REPORTS = {  # file name -> path of the report under STATS_BASE
     "skater_timeonice": "skater/timeonice",
     "goalie_summary": "goalie/summary",
+    "skater_faceoffs": "skater/faceoffpercentages",
+    "skater_powerplay": "skater/powerplay",
+    "skater_penaltykill": "skater/penaltykill",
+    "team_powerplay": "team/powerplay",
+    "team_penaltykill": "team/penaltykill",
 }
 
 

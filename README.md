@@ -85,6 +85,7 @@ src/nhl_pipeline/transform/
     season_totals.py, build_season_totals.py   skater and goalie season totals from the boxscore
     season_display.py, build_season_display.py fan-facing skater and goalie season tables (traded players get a combined row)
     special_teams.py, build_player_special_teams.py   skater power-play and penalty-kill stats (strength of goals and shots from the NHL situation code, time on ice from shifts)
+    faceoffs.py, build_player_faceoffs.py      skater faceoff wins, losses and percentage (all games, by strength and zone)
     team_special_teams.py, build_team_special_teams.py   team power-play and penalty-kill numbers and percentages (goals from the situation code, opportunities counted from penalty events)
     advanced_stats.py, build_player_advanced.py, build_team_advanced.py   Corsi, Fenwick, shots, goals, rates, relative stats
     team_basic.py, build_team_basic.py         team record, goals, shots, hits and the like
@@ -96,7 +97,7 @@ scripts/
     find_pm_goals.py    which goal explains a plus/minus difference with the boxscore
     probe_goal_boundary.py  compare four boundary rules for goals against the boxscore plus/minus
     check_stints.py, test_strength_toi.py   how strength is decided, checked against the NHL's time on ice by strength
-    check_base_tables.py, check_season_totals.py, check_goalie_totals.py, check_player_special_teams.py, check_team_special_teams.py, check_player_advanced.py, check_team_advanced.py, check_team_basic.py
+    check_base_tables.py, check_season_totals.py, check_goalie_totals.py, check_player_faceoffs.py, check_player_special_teams.py, check_team_special_teams.py, check_player_advanced.py, check_team_advanced.py, check_team_basic.py
                         checks of each metrics table (exact identities and comparisons with the NHL's numbers)
     compare_boxscore_to_nhl.py   compare the boxscore with the NHL's official event summary pages for a sample of games
     diagnose_shots_against_gap.py, diagnose_boxscore_vs_pbp.py, diagnose_special_teams_goals.py, diagnose_team_opportunities.py, diagnose_team_opportunities_by_game.py, diagnose_shorthanded_goals.py, diagnose_on_ice_membership.py, inspect_goal_strength.py
@@ -111,7 +112,7 @@ data/                   not tracked by git
     intermediate/       season=2023/event_on_ice.parquet, shifts_clean.parquet ...
     metrics/            season=2023/shot_attempts.parquet, stints.parquet, player_game_strength.parquet,
                         player_season_totals.parquet, player_season_display.parquet, goalie_season_totals.parquet,
-                        goalie_season_display.parquet, player_season_special_teams.parquet, team_game_special_teams.parquet, team_season_special_teams.parquet, player_season_advanced.parquet,
+                        goalie_season_display.parquet, player_season_special_teams.parquet, team_game_special_teams.parquet, team_season_special_teams.parquet, player_season_faceoffs.parquet, player_season_advanced.parquet,
                         team_season_advanced.parquet, team_season_basic.parquet ...
     logs/               ingestion_log.jsonl, staging_report_2023.json, onice_report_2023.json, base_tables_report_2023.json
 ```
@@ -197,6 +198,7 @@ python src/nhl_pipeline/transform/build_team_basic.py --season 2023
 | `player_season_special_teams` | skater, team (plus a combined row for a traded player) and situation (power play, shorthanded) | time on ice, share of team time, goals, assists, points, shots, shooting percentage and per-60 rates; goals and shots take their strength from the NHL's situation code, time from the shifts; matches the NHL's skater power-play and penalty-kill reports |
 | `goalie_season_totals` | goalie and team | games played and started, record, shots, saves, goals against (also by strength), shutouts, from the boxscore; matches the NHL's goalie summary for every goalie |
 | `goalie_season_display` | goalie and team, plus a combined row for a traded goalie | save percentage (also by strength), goals-against average, shots against per 60 |
+| `player_season_faceoffs` | skater, team (plus a combined row for a traded player) and situation (all, even strength, power play, shorthanded, offensive, defensive and neutral zone) | faceoffs, wins, losses and win percentage, counted from the faceoff events for every game; matches the NHL's skater faceoff report for every skater |
 | `team_game_special_teams`, `team_season_special_teams` | team and game (or season) | power-play opportunities, goals and percentage, times shorthanded, goals against and penalty-kill percentage, shorthanded goals for and against; goals match the NHL's team reports in every team-game, opportunities are our own count and match the NHL's in about 98% of team-games |
 | `player_season_advanced`, `team_season_advanced` | player (or team) and situation | Corsi, Fenwick, shots and goals for and against, percentages, per-60 rates and, for players, relative stats, for all situations, even strength, 5v5, power play and shorthanded |
 | `team_season_basic` | team | record, points, goals, shots, hits, blocks, giveaways, takeaways and penalty minutes |
@@ -211,7 +213,7 @@ Each table has a check script in `scripts/` (for example `python scripts/check_t
 | 1 | Raw ingestion of a regular season | Done for 2023-24, 2024-25 and 2025-26 |
 | 2 | Staging tables | Done for all three seasons. Goals counted from events match the final score in all 3,936 games, and player goals, assists, hits, giveaways and takeaways match the boxscore exactly |
 | 3 | On-ice join of events to shifts, strength states | Done for all three seasons. On-ice counts agree with `situationCode` for 99.3-99.4% of events, and our plus/minus matches the boxscore for 99.9% of skater-games |
-| 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Skater power-play and penalty-kill stats are built (power-play goals, assists and points match the NHL's reports for every skater). Team power-play and penalty-kill percentages are built (within 0.5 points of the NHL's for every team). Still to build: faceoff percentage, high-danger goalie stats (after the xG model) |
+| 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Skater power-play and penalty-kill stats are built (power-play goals, assists and points match the NHL's reports for every skater). Team power-play and penalty-kill percentages are built (within 0.5 points of the NHL's for every team). Skater faceoff counts and percentages are built (counts and percentages match the NHL's faceoff report for every skater, in total, by strength and by zone). Phase 4 is complete except the stats that need the xG model (high-danger goalie stats), which come after Phase 5 |
 | 5 | Validation against boxscores and Natural Stat Trick | Planned |
 | 6 | Line and defense-pair analysis | Planned |
 | 7 | Player comparison (pizza charts) and similarity | Planned |

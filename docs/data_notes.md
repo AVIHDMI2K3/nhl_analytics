@@ -94,6 +94,12 @@ and 10 player-games in the three seasons (counted before the goalie fill, not re
 
 - Assists, hits, giveaways and takeaways match the boxscore for every player-game, and faceoff
   percentage matches within 0.1 point.
+- **Faceoffs** (`player_season_faceoffs`) are counted from the faceoff events with the strength from the
+  situation code and the loser's zone flipped from the event's. Faceoff counts match the NHL's skater
+  faceoff report for every skater in all three seasons (924, 920 and 940 skaters; 148,376, 148,592 and
+  146,992 faceoffs) in total, by strength (even strength, power play, shorthanded) and by zone, and so do
+  the win percentages to 0.1 point. Power-play and shorthanded faceoffs are the same total in each season
+  (every faceoff has one skater on each side), as are offensive and defensive zone.
 - **Giveaways and takeaways are not comparable across seasons.** Skaters' giveaways in the
   boxscore were 19,192 in 2023, 36,824 in 2024 and 39,180 in 2025, and takeaways were 18,298,
   12,065 and 12,099. That is too large a change to be play, so it is probably a change in how

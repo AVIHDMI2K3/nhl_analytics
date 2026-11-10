@@ -246,7 +246,24 @@ Shorthanded penalty-shot goals, which are not in `shot_attempts`, are added from
 the NHL's team reports: goals match in every team-game, power-play and penalty-kill percentages are within
 0.5 points for every team.
 
+## Skater faceoffs (built)
+
+`player_season_faceoffs`, from `faceoffs.py` and `build_player_faceoffs.py`: one row per skater, team (and a
+combined `TOT` row for a traded player) and situation. Counted straight from the faceoff events, so every game
+is included, unlike the `faceoff_wins` and `faceoff_losses` in the base tables, which need shift data.
+
+| Column | Meaning |
+|---|---|
+| situation | `all`, `ev`, `pp`, `sh` (his team's strength from the NHL `situationCode`), `oz`, `dz`, `nz` (the zone in his own terms; the event's zone is the winner's view, so the loser's is flipped) |
+| faceoffs, faceoff_wins, faceoff_losses | His faceoffs in the situation |
+| faceoff_pct | 100 x wins / faceoffs; empty with no faceoffs |
+| games_played, games_included | Boxscore games played; games in which he took a faceoff in the situation |
+
+Percentages come from the sums (a traded player's combined row adds the team rows first). Checked against the
+NHL's skater faceoff report: faceoff counts match for every skater in all three seasons in total, by strength
+and by zone, and so do the win percentages (to 0.1 point).
+
 ## Still planned
 
-Faceoff percentage, xG and high-danger chances
+xG and high-danger chances
 including goalie quality-of-shot stats (after Phase 5), lines and pairs, pizza charts and similarity.

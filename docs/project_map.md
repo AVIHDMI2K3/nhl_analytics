@@ -57,6 +57,10 @@ Phase 3: build the on-ice tables for one season from the staging tables.
 Phase 4.7: build the advanced on-ice skater table for one season.
 - functions: `write_table`, `main`
 
+### `src/nhl_pipeline/transform/build_player_faceoffs.py`
+Phase 4.12: build the skater faceoff table for one season.
+- functions: `write_table`, `main`
+
 ### `src/nhl_pipeline/transform/build_player_special_teams.py`
 Phase 4.10: build the power-play and penalty-kill skater table for one season.
 - functions: `write_table`, `main`
@@ -85,9 +89,17 @@ Phase 4.8: build the advanced on-ice team table for one season.
 Phase 4.9: build the team season basic table for one season.
 - functions: `write_table`, `main`
 
+### `src/nhl_pipeline/transform/build_team_special_teams.py`
+Phase 4.11: build the team power-play and penalty-kill tables for one season.
+- functions: `write_table`, `main`
+
 ### `src/nhl_pipeline/transform/event_stats.py`
 Phase 4.4: the other counting stats, from play-by-play events (pure logic, no file access).
 - functions: `player_side`, `credit_event_stats`
+
+### `src/nhl_pipeline/transform/faceoffs.py`
+Phase 4.12: faceoff wins, losses and percentage per skater (pure logic, no file access).
+- functions: `side_strength`, `count_faceoffs`, `add_faceoff_rates`
 
 ### `src/nhl_pipeline/transform/onice.py`
 Phase 3 logic: which players were on the ice for each event.
@@ -118,6 +130,10 @@ Phase 4.2: stints (stretches with a fixed lineup) and time on ice by strength. P
 Phase 4.9: team season basic stats (pure logic).
 - functions: `build_team_basic`
 
+### `src/nhl_pipeline/transform/team_special_teams.py`
+Phase 4.11: team power-play and penalty-kill numbers (pure logic, no file access).
+- functions: `prepare_penalties`, `penalty_opportunities`, `goals_by_strength`, `penalty_shot_goals`, `stint_strength`, `shorthanded_penalty_shot_goals`, `shorthanded_penalty_shot_attempts`, `build_team_game_rows`, `percent`, `build_team_season_rows`
+
 ## scripts/
 
 ### `scripts/check_base_tables.py`
@@ -139,6 +155,10 @@ Check the goalie season totals against the NHL's own goalie report, before anyth
 ### `scripts/check_player_advanced.py`
 Check the advanced on-ice skater table (Phase 4.7).
 - functions: `bucket`, `main`
+
+### `scripts/check_player_faceoffs.py`
+Check our skater faceoff table against the NHL's skater faceoff report.
+- functions: `percent_scale`, `our_totals`, `compare`, `main`
 
 ### `scripts/check_player_special_teams.py`
 Check our power-play and shorthanded numbers per skater against the NHL's player reports.
@@ -164,6 +184,10 @@ Check the advanced on-ice team table (Phase 4.8).
 Check the team season basic table (Phase 4.9).
 - functions: `main`
 
+### `scripts/check_team_special_teams.py`
+Check our team power-play and penalty-kill tables against the NHL's team reports.
+- functions: `as_percent`, `compare`, `load`, `main`
+
 ### `scripts/compare_boxscore_to_nhl.py`
 Compare our boxscore data with the NHL's official game summary pages.
 - classes: `RowCollector`
@@ -181,6 +205,10 @@ Verify the goalie shifts and find why the boxscore differs from the play-by-play
 Test whether the remaining on-ice goal differences are about WHO was on the ice at a line change.
 - functions: `candidate_stints`, `membership_counts`, `explain`, `main`
 
+### `scripts/diagnose_shorthanded_goals.py`
+Find the team-games where our shorthanded goal count differs from the NHL's, and show their goals.
+- functions: `disagreeing`, `main`
+
 ### `scripts/diagnose_shots_against_gap.py`
 Find what causes the gap between skaters' shots and goalies' shots against.
 - functions: `bucket`, `goalie_changes`, `analyze_game`, `team_record`, `percent`, `main`
@@ -188,6 +216,14 @@ Find what causes the gap between skaters' shots and goalies' shots against.
 ### `scripts/diagnose_special_teams_goals.py`
 Check our power-play and shorthanded goals game by game against the boxscore's goalies.
 - functions: `code_goal_counts`, `compare_by_game`, `main`
+
+### `scripts/diagnose_team_opportunities.py`
+First look at power-play opportunities: count them from the penalty events and compare with the NHL.
+- functions: `at_regulation_end`, `kept`, `count_opportunities_clock`, `count_opportunities`, `cancelled_pairs`, `load_report`, `compare`, `main`
+
+### `scripts/diagnose_team_opportunities_by_game.py`
+Compare power-play opportunities per team and game with the NHL's, and find what the differences share.
+- functions: `by_game`, `per_game_counts`, `compare`, `game_features`, `feature_table`, `load_games`, `main`
 
 ### `scripts/find_pm_goals.py`
 Phase 3 check: which goal explains a plus/minus difference with the boxscore?
@@ -255,6 +291,10 @@ Tests for the player special-teams check: the per-skater sums and the comparison
 - tests: 4
 - functions: `state`
 
+### `tests/test_check_team_special_teams.py`
+Tests for the helpers of scripts/check_team_special_teams.py.
+- tests: 2
+
 ### `tests/test_compare_boxscore_to_nhl.py`
 Tests for the comparison script's parsing, using made-up HTML (NOT the real NHL page layout).
 - tests: 4
@@ -269,6 +309,10 @@ Tests for the on-ice membership diagnostic. Tiny made-up stints and goals.
 - tests: 5
 - functions: `stint`, `goal`
 
+### `tests/test_diagnose_shorthanded_goals.py`
+Tests for the helper of scripts/diagnose_shorthanded_goals.py.
+- tests: 1
+
 ### `tests/test_diagnose_shots_against_gap.py`
 Tests for the shots-against diagnosis. A tiny made-up game, no real data.
 - tests: 5
@@ -279,10 +323,25 @@ Tests for the special-teams goal comparison. A tiny made-up game, no real data.
 - tests: 6
 - functions: `trow`, `goalie`, `goal`
 
+### `tests/test_diagnose_team_opportunities.py`
+Tests for the opportunity counting. Made-up penalties, no real data.
+- tests: 16
+- functions: `pen`, `clock`
+
+### `tests/test_diagnose_team_opportunities_by_game.py`
+Tests for the per-game opportunity comparison. Made-up penalties.
+- tests: 4
+- functions: `pen`
+
 ### `tests/test_event_stats.py`
 Tests for the Phase 4.4 event-stat logic. A tiny made-up game, no real data.
 - tests: 11
 - functions: `shift`, `ice`, `event`, `tables`, `find`
+
+### `tests/test_faceoffs.py`
+Tests for the faceoff logic. Made-up events, no real data.
+- tests: 6
+- functions: `faceoff`
 
 ### `tests/test_ingest.py`
 Tests for the Phase 1 ingestion code. They use fake responses, no network.
@@ -320,9 +379,9 @@ Tests for the Phase 4.1 shot-attempt logic. A tiny made-up game, no real data.
 - functions: `event`, `on_ice_row`, `build`
 
 ### `tests/test_special_teams.py`
-Tests for the power-play and penalty-kill skater stats. Made-up rows, no real data.
+Tests for the team power-play and penalty-kill logic. Made-up games, no real data.
 - tests: 12
-- functions: `prow`, `trow`, `attempt`, `season_row`, `build`
+- functions: `penalty`, `prepared`, `goal`, `event`
 
 ### `tests/test_staging.py`
 Tests for the Phase 2 staging code. They use small made-up responses, no network.
@@ -338,6 +397,11 @@ Tests for the Phase 4.2 stint logic. A tiny made-up game, no real data.
 Tests for the team season basic stats. Made-up games and boxscore rows, no real data.
 - tests: 4
 - functions: `game`, `player`, `by_team`
+
+### `tests/test_team_special_teams.py`
+Tests for the team power-play and penalty-kill logic. Made-up games, no real data.
+- tests: 13
+- functions: `penalty`, `prepared`, `goal`, `event`
 
 ## docs/
 
@@ -380,6 +444,8 @@ Tests for the team season basic stats. Made-up games and boxscore rows, no real 
   columns: season, player_id, name, position, kind, team_id, team, teams, situation, games_played, games_included, seconds, cf, ca, ff, fa, sf, sa, gf, ga, icf, iff, isf, ig, blocks_made, off_seconds, off_cf, off_ca, off_ff, off_fa, off_sf, off_sa, off_gf, off_ga, cf_pct, ff_pct, sf_pct, gf_pct, cf_pct_rel, ff_pct_rel, sf_pct_rel, gf_pct_rel, cf_per_60, ca_per_60, ff_per_60, fa_per_60, sf_per_60, sa_per_60, gf_per_60, ga_per_60, icf_per_60, isf_per_60, ig_per_60, blocks_made_per_60
 - `player_season_display` (2023: 1,064, 2024: 1,129, 2025: 1,104 rows)
   columns: season, player_id, name, position, kind, team_id, team, teams, games_played, goals, assists, points, plus_minus, pim, hits, power_play_goals, sog, blocked_shots, giveaways, takeaways, toi_seconds, shifts, toi_per_game_seconds, shooting_pct, goals_per_60, assists_per_60, points_per_60, shots_per_60, hits_per_60, blocks_per_60, giveaways_per_60, takeaways_per_60
+- `player_season_faceoffs` (2023: 3,749, 2024: 3,961, 2025: 3,922 rows)
+  columns: season, player_id, name, position, kind, team_id, team, teams, situation, games_played, games_included, faceoffs, faceoff_wins, faceoff_losses, faceoff_pct
 - `player_season_special_teams` (2023: 1,893, 2024: 1,987, 2025: 1,957 rows)
   columns: season, player_id, name, position, kind, team_id, team, teams, situation, games_played, games_included, seconds, team_seconds, goals, assists_primary, assists_secondary, assists, points, shots, gf, ga, included_goals, included_assists, included_points, included_shots, toi_per_game_seconds, team_share_pct, shooting_pct, goals_per_60, assists_per_60, points_per_60, shots_per_60, gf_per_60, ga_per_60
 - `player_season_totals` (2023: 995, 2024: 1,027, 2025: 1,023 rows)
@@ -388,10 +454,14 @@ Tests for the team season basic stats. Made-up games and boxscore rows, no real 
   columns: season, game_id, event_id, sort_order, period, period_type, seconds_in_period, game_seconds, attempt_type, shooter_id, team_id, opponent_team_id, is_home, shot_type, zone_code, x_raw, y_raw, x, y, goalie_id, blocker_id, blocker_is_teammate, skaters_for, skaters_against, goalie_for, goalie_against, score_for, score_against, has_on_ice, matches_situation, uses_conflicting_shift, skater_ids_for, skater_ids_against
 - `stints` (2023: 519,431, 2024: 500,631, 2025: 519,830 rows)
   columns: season, game_id, period, start_game_seconds, end_game_seconds, seconds, home_skater_ids, away_skater_ids, home_goalie_ids, away_goalie_ids, home_real_skaters, away_real_skaters, home_strength, away_strength
+- `team_game_special_teams` (2023: 2,624, 2024: 2,624, 2025: 2,624 rows)
+  columns: season, game_id, team_id, opponent_team_id, pp_opportunities, pp_goals, times_shorthanded, pk_goals_against, sh_goals_for, sh_goals_against
 - `team_game_strength` (2023: 14,034, 2024: 12,930, 2025: 13,902 rows)
   columns: season, game_id, team_id, strength, skaters_for, skaters_against, goalies_for, goalies_against, seconds, for_goal, for_sog, for_miss, for_block, against_goal, against_sog, against_miss, against_block
 - `team_season_advanced` (2023: 160, 2024: 160, 2025: 160 rows)
   columns: season, team_id, team, situation, games_played, games_included, seconds, cf, ca, ff, fa, sf, sa, gf, ga, cf_pct, ff_pct, sf_pct, gf_pct, cf_per_60, ca_per_60, ff_per_60, fa_per_60, sf_per_60, sa_per_60, gf_per_60, ga_per_60
 - `team_season_basic` (2023: 32, 2024: 32, 2025: 32 rows)
   columns: season, team_id, team, games_played, wins, losses, ot_losses, points, regulation_wins, row, goals_for, goals_against, shots_for, shots_against, pp_goals_for, pp_goals_against, hits, blocked_shots, giveaways, takeaways, pim, goal_diff, points_pct, goals_for_per_game, goals_against_per_game, shots_for_per_game, shots_against_per_game
+- `team_season_special_teams` (2023: 32, 2024: 32, 2025: 32 rows)
+  columns: season, team_id, team, games_played, pp_opportunities, pp_goals, times_shorthanded, pk_goals_against, sh_goals_for, sh_goals_against, pp_pct, pk_pct, pp_opportunities_per_game, times_shorthanded_per_game
 

@@ -203,8 +203,50 @@ Checked: at 5v5 total Corsi for equals total Corsi against, and equals five time
 attempts, exactly, in all three seasons; time on ice by strength agrees with the NHL's within the small
 gaps in `docs/data_notes.md` for the games covered.
 
+## Player power play and penalty kill (built)
+
+`player_season_special_teams`, from `special_teams.py` and `build_player_special_teams.py`: one row per
+skater, team (and a combined `TOT` row for a traded player) and situation, `pp` (power play) or `sh`
+(shorthanded). Two sources, kept apart by column:
+
+| Column | Source | Meaning |
+|---|---|---|
+| goals, assists_primary, assists_secondary, assists, points, shots | play-by-play, strength from the NHL `situationCode` on each goal or shot; every game | His own numbers in the situation. Shots are shots on goal, goals included. A pulled goalie counts as an extra attacker, not a skater, as in the NHL's power-play goal rule |
+| seconds, team_seconds | shifts (stints); games with shift data | His time in the situation, and his team's time in it in the games he played |
+| gf, ga | shifts for who was on the ice, situation code for the strength | Team goals for and against while he was on the ice (all other on-ice stats are in `player_season_advanced`) |
+| included_goals, included_assists, included_points, included_shots | code, restricted to games with shift data | The counts the per-60 rates use, so a count and a time cover the same games |
+| games_played, games_included | boxscore, shifts | Games played and games with shift data |
+| toi_per_game_seconds | | seconds / games included |
+| team_share_pct | | 100 x seconds / team_seconds |
+| shooting_pct | | 100 x goals / shots (all games) |
+| goals_per_60, assists_per_60, points_per_60, shots_per_60 | | included count x 3600 / seconds |
+| gf_per_60, ga_per_60 | | on-ice goals x 3600 / seconds |
+
+Rates come from the sums (a traded player's combined row adds the team rows first) and are empty when the
+divisor is zero. Individual shot attempts are not included (see `docs/data_notes.md`). Checked against the
+NHL's skater power-play and penalty-kill reports: power-play goals, assists and points match for every
+skater in all three seasons; shorthanded goals, assists and points match too, with the shorthanded
+penalty-shot goals added from the events (see `docs/data_notes.md`).
+
+## Team power play and penalty kill (built)
+
+`team_game_special_teams` (one row per team and game) and `team_season_special_teams` (one row per team), from
+`team_special_teams.py` and `build_team_special_teams.py`. All games are included (no shift data needed).
+
+| Column | Source | Meaning |
+|---|---|---|
+| pp_opportunities, times_shorthanded | penalty events | Power plays the team got, and times it was shorthanded (the other team's opportunities). Our own count, see `docs/data_notes.md` |
+| pp_goals, pk_goals_against | play-by-play, strength from the NHL `situationCode` | Power-play goals scored, and power-play goals allowed. Empty-net goals count |
+| sh_goals_for, sh_goals_against | same | Shorthanded goals scored, and allowed while on the power play |
+| pp_pct | | 100 x pp_goals / pp_opportunities |
+| pk_pct | | 100 x (1 - pk_goals_against / times_shorthanded) |
+| pp_opportunities_per_game, times_shorthanded_per_game | | Season rate per game played |
+
+Shorthanded penalty-shot goals, which are not in `shot_attempts`, are added from the events. Checked against
+the NHL's team reports: goals match in every team-game, power-play and penalty-kill percentages are within
+0.5 points for every team.
+
 ## Still planned
 
-Power-play and penalty-kill percentages (need power-play opportunities counted from the penalty events and
-checked), faceoff percentage, xG and high-danger chances including goalie quality-of-shot stats (after
-Phase 5), lines and pairs, pizza charts and similarity.
+Faceoff percentage, xG and high-danger chances
+including goalie quality-of-shot stats (after Phase 5), lines and pairs, pizza charts and similarity.

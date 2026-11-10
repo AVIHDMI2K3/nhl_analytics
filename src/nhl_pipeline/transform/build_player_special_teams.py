@@ -21,6 +21,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from build_season_display import full_names, team_abbrevs
+from team_special_teams import penalty_shot_goals, shorthanded_penalty_shot_attempts
 from special_teams import COUNT_COLUMNS, RATE_COLUMNS, build_special_teams_counts, build_special_teams_display, goal_assists
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -32,7 +33,11 @@ ATTEMPT_COLUMNS = [
     "game_id", "event_id", "attempt_type", "shooter_id", "team_id",
     "skaters_for", "skaters_against", "goalie_for", "goalie_against",
 ]
-EVENT_COLUMNS = ["game_id", "event_id", "event_type", "assist1_player_id", "assist2_player_id"]
+EVENT_COLUMNS = [
+    "game_id", "event_id", "event_type", "period_type", "game_seconds", "event_owner_team_id", "situation_code",
+    "scoring_player_id", "assist1_player_id", "assist2_player_id",
+]
+STINT_COLUMNS = ["game_id", "start_game_seconds", "end_game_seconds", "home_strength", "away_strength"]
 SCHEMA = pa.schema(
     [("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position", pa.string()),
      ("kind", pa.string()), ("team_id", pa.int64()), ("team", pa.string()), ("teams", pa.string()),
@@ -61,10 +66,18 @@ def main():
     team_rows = pq.read_table(metrics / "team_game_strength.parquet", columns=TEAM_COLUMNS).to_pylist()
     season_rows = pq.read_table(metrics / "player_season_totals.parquet").to_pylist()
     attempts = pq.read_table(metrics / "shot_attempts.parquet", columns=ATTEMPT_COLUMNS).to_pylist()
-    assists = goal_assists(pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist())
+    events = pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
+    assists = goal_assists(events)
+    # Penalty-shot goals are not in shot_attempts; the NHL counts those scored shorthanded as shorthanded goals.
+    games = {g["game_id"]: g for g in pq.read_table(
+        staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
+    stints_by_game = {}
+    for stint in pq.read_table(metrics / "stints.parquet", columns=STINT_COLUMNS).to_pylist():
+        stints_by_game.setdefault(stint["game_id"], []).append(stint)
+    attempts += shorthanded_penalty_shot_attempts(penalty_shot_goals(events, games), stints_by_game)
 
-    totals, games = build_special_teams_counts(player_rows, team_rows, attempts, assists)
-    rows = build_special_teams_display(totals, games, season_rows, full_names(staging), team_abbrevs(staging))
+    totals, games_included = build_special_teams_counts(player_rows, team_rows, attempts, assists)
+    rows = build_special_teams_display(totals, games_included, season_rows, full_names(staging), team_abbrevs(staging))
     for row in rows:
         row["season"] = args.season
     out = metrics / "player_season_special_teams.parquet"

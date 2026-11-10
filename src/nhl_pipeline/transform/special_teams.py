@@ -64,7 +64,8 @@ def individual_counts_from_code(attempts, assists, games=None):
     for the power play and shorthanded, with the strength of each goal or shot taken from the situation
     code (see code_strength). Works for every game, with or without shift data.
 
-    `attempts` are shot_attempts rows (goals and shots on goal are used); `assists` maps (game_id,
+    `attempts` are shot_attempts rows (goals and shots on goal are used; a row with a `strength` of its own,
+    such as a shorthanded penalty-shot goal, uses that instead of the code); `assists` maps (game_id,
     event_id) of a goal to (first assist player id, second assist player id). Keys: goals,
     assists_primary, assists_secondary, assists, points, shots (shots on goal, goals included).
     When `games` ({(player_id, team_id): games with shift data}) is given, the same counts for those
@@ -83,7 +84,7 @@ def individual_counts_from_code(attempts, assists, games=None):
     for attempt in attempts:
         if attempt["attempt_type"] not in ("goal", "shot-on-goal"):
             continue
-        situation = code_strength(attempt)
+        situation = attempt.get("strength") or code_strength(attempt)
         if situation not in SITUATIONS:
             continue
         team, game_id = attempt["team_id"], attempt["game_id"]

@@ -15,6 +15,8 @@ Saves, for the regular season, each response exactly as received, in data/raw/se
     skater_penaltykill.json.gz one row per skater: penalty-kill time on ice, shorthanded goals and points
     team_powerplay.json.gz     one row per team: power-play opportunities, goals and percentage
     team_penaltykill.json.gz   one row per team: times shorthanded, goals against and percentage
+    team_powerplay_games.json.gz   the same power-play report with one row per team and game
+    team_penaltykill_games.json.gz the same penalty-kill report with one row per team and game
 """
 
 import argparse
@@ -36,16 +38,21 @@ REPORTS = {  # file name -> path of the report under STATS_BASE
     "team_powerplay": "team/powerplay",
     "team_penaltykill": "team/penaltykill",
 }
+GAME_REPORTS = {  # the same reports with one row per team and game (isGame=true)
+    "team_powerplay_games": "team/powerplay",
+    "team_penaltykill_games": "team/penaltykill",
+}
 
 
-def download_report(fetcher, season, name, endpoint, raw_root):
-    """Download one report for the regular season and save it; exit if the NHL's answer is incomplete."""
+def download_report(fetcher, season, name, endpoint, raw_root, per_game=False):
+    """Download one report for the regular season and save it; exit if the NHL's answer is incomplete.
+    With `per_game` the report has one row per team and game instead of one per season."""
     season_id = f"{season}{season + 1}"
     response = fetcher.get(
         f"{STATS_BASE}/{endpoint}",
         params={
             "isAggregate": "false",
-            "isGame": "false",
+            "isGame": "true" if per_game else "false",
             "limit": -1,
             "start": 0,
             "cayenneExp": f"seasonId={season_id} and gameTypeId=2",
@@ -72,6 +79,8 @@ def main():
     fetcher = Fetcher(min_interval=args.min_interval)
     for name, endpoint in REPORTS.items():
         download_report(fetcher, args.season, name, endpoint, args.raw_root)
+    for name, endpoint in GAME_REPORTS.items():
+        download_report(fetcher, args.season, name, endpoint, args.raw_root, per_game=True)
 
 
 if __name__ == "__main__":

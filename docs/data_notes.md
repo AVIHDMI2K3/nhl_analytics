@@ -170,12 +170,12 @@ goalies' boxscore numbers game by game.
   not from who is on the ice yet), or showed six real skaters for a team that had pulled its goalie. The
   code was right in all seven. Over all goals with a goalie in net the code agrees with the goalies'
   boxscore numbers in every team-game for power-play goals (2,624, 2,510 and 2,624 team-games) and in all
-  but 0, 1 and 2 for shorthanded goals; the shifts were off in 16, 12 and 10 power-play team-games and 4, 2
-  and 3 shorthanded ones.
+  but 0, 1 and 2 for shorthanded goals (the remaining ones are penalty-shot goals, see below); the shifts
+  were off in 16, 12 and 10 power-play team-games and 4, 2 and 3 shorthanded ones.
 - **Against the NHL's player reports** (strength from the code): power-play goals, assists, primary and
   secondary assists and points match for every skater in all three seasons (924, 920 and 940), including
-  2024 because the code does not need shifts; shorthanded assists match for every skater and shorthanded
-  goals for all but 0, 1 and 2 skaters (one off). Shots on goal match for 99% of skaters on the power play
+  2024 because the code does not need shifts; shorthanded assists match for every skater, and so do
+  shorthanded goals and points once the penalty-shot goals are added (see below). Shots on goal match for 99% of skaters on the power play
   (916 of 924, 915 of 920, 935 of 940) and 98-99% shorthanded. Totals are equal or within a few.
   Strength from the shifts was exact for only 91-97% (and not for skaters in the 57 games).
 - **Boxscore power-play goals** match the NHL's skater report for every skater in all three seasons.
@@ -202,8 +202,40 @@ goalies' boxscore numbers game by game.
   Corsi for 94% of skaters. The rule is not understood. They stay in the advanced table with our definition.
 - **Per-60 rates** of goals, assists, points and shots use only the games with shift data (the
   `included_*` columns), so a count and a time cover the same games; shooting percentage uses all games.
-- **Remaining disagreement:** shorthanded goals where the code says even strength (1 in 2024, 2 in 2025);
-  not looked at.
+- **Penalty-shot goals** are not in `shot_attempts` (the situation code shows one skater against none, and
+  they are not counted as shot attempts). The NHL counts one scored by a team that is shorthanded as a
+  shorthanded goal. Both special-teams tables add those goals, found from the events (situation code 1010 or
+  0101, not in a shootout) with the scorer's strength taken from the stint covering that second
+  (`team_special_teams.penalty_shot_goals`). There are 16, 7 and 6 penalty-shot goals outside shootouts in
+  2023-2025; 0, 1 and 2 were scored shorthanded and the rest at even strength. None was scored on a
+  power play, so the NHL's treatment of that case is untested (power-play goals match with penalty-shot
+  goals left out). With this, shorthanded goals match the NHL for every skater and every team-game in all
+  three seasons. Found with `scripts/diagnose_shorthanded_goals.py`.
+- **Remaining disagreement:** shots on goal differ by one for a few skaters (power play 5 in each of 2024 and 2025,
+  shorthanded 5 and 6; see above), and individual shot attempts and time on ice by strength as
+  described above.
+
+## Team power play and penalty kill
+
+`team_game_special_teams` and `team_season_special_teams` take goals from the situation code (strength as in
+"Power play and shorthanded") and count opportunities from the penalty events. Checked with
+`scripts/check_team_special_teams.py` against the NHL's per-team, per-game and per-season reports.
+
+- **Goals:** power-play and shorthanded goals, for and against, match the NHL for every team-game in all three
+  seasons (2,624 of 2,624 each; 2023-2025 power-play goals 1,660, 1,537 and 1,595; shorthanded 234, 208
+  and 205). The shorthanded ones need the penalty-shot goals added (see "Power play and shorthanded").
+- **Opportunities** are our own count because the NHL does not publish its rule. The rule, found by comparing
+  with the NHL's per-game counts: a 2- or 5-minute penalty is one opportunity for the other team, a 4-minute
+  double minor is two; penalties of the same length given to both teams at the same second cancel one for
+  one (coincident minors, and the pair of majors in a fight); penalties at exactly 3600 s of a game without
+  overtime do not count; misconducts (10 minutes) and penalty shots (0) do not count.
+  Result: exact in 2,555, 2,582 and 2,583 of 2,624 team-games in 2023-2025, no team-game off by more than 2,
+  and totals of 7,943, 7,123 and 7,581 opportunities against the NHL's 7,917, 7,101 and 7,555 (+0.3%). Rules tried and rejected because they matched
+  less often: a full penalty-clock model, leaving majors uncancelled (about 600 too many), treating minors
+  and majors differently, and ignoring late penalties.
+- **Open:** the remaining 1.6-2.6% of team-games are off by one or two with no pattern found.
+  Season percentages are not affected much: power-play % and penalty-kill % are within 0.5 points of the NHL's
+  for all 32 teams in every season (mean difference 0.09-0.13 points).
 
 ## Goalie season stats
 

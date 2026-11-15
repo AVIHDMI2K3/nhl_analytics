@@ -28,7 +28,11 @@ miss or block:
   blocks_made                  shots blocked by the player, not counting a block of a
                                teammate's shot
 An attempt belongs to the stint it falls in, with the same boundary rule as Phase 3:
-goals are end-inclusive, everything else start-inclusive. The stint decides WHO was on the
+goals are end-inclusive, everything else start-inclusive. Two exceptions, chosen because they
+agree best with Natural Stat Trick's per-skater Corsi in 2023 and 2025 (see docs/data_notes.md):
+the skaters of the defending team for an attempt that is not a goal, and the shooting team's
+skaters for a shot on goal, are taken from the stint that ENDS at the attempt's second
+(end-inclusive). The stint decides WHO was on the
 ice (the skaters credited); the state (strength and skater counts) the attempt is counted
 under comes from the NHL situationCode on the attempt when the attempt row has it
 (skaters_for, skaters_against, goalie_for, goalie_against, from the shooting team's view),
@@ -119,6 +123,11 @@ def build_game_tables(game, stints, attempts, events=(), records=None):
             continue
         shooting = "home" if attempt["is_home"] else "away"
         defending = other_side(shooting)
+        defending_stint = shooting_stint = stint
+        if kind != "goal":
+            defending_stint = index.at(attempt["game_seconds"], end_inclusive=True) or stint
+        if kind == "sog":
+            shooting_stint = defending_stint
         shooting_state, defending_state = side_state(stint, shooting), side_state(stint, defending)
         from_code = code_states(attempt)
         if from_code is not None:
@@ -130,9 +139,9 @@ def build_game_tables(game, stints, attempts, events=(), records=None):
 
         teams[(shooting_team, *shooting_state)][f"for_{kind}"] += 1
         teams[(defending_team, *defending_state)][f"against_{kind}"] += 1
-        for player_id in stint[f"{shooting}_skater_ids"]:
+        for player_id in shooting_stint[f"{shooting}_skater_ids"]:
             players[(player_id, shooting_team, *shooting_state)][f"for_{kind}"] += 1
-        for player_id in stint[f"{defending}_skater_ids"]:
+        for player_id in defending_stint[f"{defending}_skater_ids"]:
             players[(player_id, defending_team, *defending_state)][f"against_{kind}"] += 1
 
         shooter = attempt["shooter_id"]

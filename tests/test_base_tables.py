@@ -88,6 +88,21 @@ def test_goals_are_end_inclusive_and_other_attempts_start_inclusive():
     assert find(players, player_id=16)["ind_sog"] == 1  # the shot belongs to the stint starting at 60
 
 
+def test_boundary_rule_by_attempt_type_at_a_line_change():
+    # all ten skaters change at 60; each attempt happens at second 60
+    rows = ice(0, 60) + ice(60, 120, home=range(16, 21), away=range(26, 31))
+    attempts = [attempt("shot-on-goal", 60, shooter=11), attempt("missed-shot", 60, shooter=16),
+                attempt("goal", 60, shooter=11)]
+    players, _, _ = tables(rows, attempts)
+    # shot on goal and goal: both sides from the stint ending at 60
+    assert find(players, player_id=11, strength="ev")["for_sog"] == 1 and find(players, player_id=16, strength="ev")["for_sog"] == 0
+    assert find(players, player_id=21, strength="ev")["against_sog"] == 1 and find(players, player_id=26, strength="ev")["against_sog"] == 0
+    assert find(players, player_id=11, strength="ev")["for_goal"] == 1 and find(players, player_id=21, strength="ev")["against_goal"] == 1
+    # missed shot: the shooting side from the stint starting at 60, the defenders from the one ending at 60
+    assert find(players, player_id=16, strength="ev")["for_miss"] == 1 and find(players, player_id=11, strength="ev")["for_miss"] == 0
+    assert find(players, player_id=21, strength="ev")["against_miss"] == 1 and find(players, player_id=26, strength="ev")["against_miss"] == 0
+
+
 def test_power_play_attempt_uses_each_sides_own_state():
     players, teams, _ = tables(ice(0, 60, home=range(11, 15)), [attempt("shot-on-goal", 30, home=False, shooter=21)])
     assert find(teams, team_id=2, strength="pp")["for_sog"] == 1

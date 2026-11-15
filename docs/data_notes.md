@@ -23,18 +23,27 @@ page (game 2024020913 player 8475231: 20 against 10; game 2023020130 player 8479
 5). Both sources probably come from the same NHL database. Simple totals are therefore taken from
 the boxscore; stats that depend on who was on the ice are calculated by us.
 
-## Games left out
+## Games without API shifts
 
-**57 games in 2024-25 have no shift data from the NHL** (game ids 2024021235 to 2024021291).
-Without shifts there is no time on ice and no record of who was on the ice, so those games are
-left out of every table built from stints: on-ice numbers and the rates built from them.
-They are not partly included, so every on-ice stat in a season describes the same games. The
-boxscore does cover these games (checked: all 57 are there with time on ice), so skater season
-totals and games played match the NHL's. The advanced tables carry both `games_played` and
-`games_included`, and the fan view must show them side by side and say why they differ. Our
-2024-25 on-ice time is about 4% below the NHL's for the same reason.
-`data/logs/base_tables_report_<season>.json` lists the games left out. The ingestion re-checks
-them, and an HTML time-on-ice fallback is possible; if either fills them, rebuild.
+**57 games in 2024-25 have no shift data from the NHL's API** (game ids 2024021235 to 2024021291,
+`shift_status` = `none_from_nhl`). Without shifts there is no time on ice and no record of who was
+on the ice, and the 2024-25 on-ice numbers were about 4.4% below Natural Stat Trick's (6,963 of
+159,107 team minutes, which is 57 games of about 122 team-minutes).
+
+**They are filled from the NHL's HTML time-on-ice reports** (`nhl.com/scores/htmlreports`, the `TH`
+and `TV` pages, the source Natural Stat Trick uses). `scripts/compare_html_shifts.py` compared the reports
+with the API shifts on four games that have both: every shift had the same start and end second
+(715, 738, 752 and 724 shifts). `scripts/fill_missing_shifts.py` reads the 57 games, matches players to
+ids by jersey number through the boxscore, and checks that each player's total shift time is within
+2 seconds of the boxscore's time on ice (all 57 games passed, 43,224 shifts). It adds the shifts to
+`shifts.parquet`, sets the games' `shift_status` to `ok` and `shift_source` to `html_report`, and
+keeps the first version of the files as `.bak`. The HTML reports have no shift id, so `shift_id` is empty
+for these rows. After the fill, on-ice counts for the 57 games agree with `situationCode` like the rest
+(99.39% of events in the season), plus/minus matches the boxscore for 99.96% of skater-games, and
+all-situations league Corsi for matches Natural Stat Trick's 777,260 with 777,259. The staging step replaces
+`games.parquet` and `shifts.parquet`, so run the fill again after re-staging a season. A game with no shifts
+from either source would be left out of every table built from stints; the advanced tables carry both
+`games_played` and `games_included` so the app can show them side by side.
 
 **One game's shift chart held another game's shifts.** The chart for 2025020565 (NJD-BUF) also
 had the shifts of SJS-VGK, 667 rows. Shifts by a team that is not in the game are removed.
@@ -52,14 +61,14 @@ had the shifts of SJS-VGK, 667 rows. Shifts by a team that is not in the game ar
   conflicting. Merging overlapping shifts into one stretch gives the same exact counts, and where we
   differ we are almost always higher (2025: 86 higher, 6 lower). Cause not found. By strength
   (`scripts/check_base_tables.py`), skaters more than 60 s off: 2025: 28 even strength, 14 power play,
-  10 shorthanded; 2023: 75, 45 and 28. 2024 is not comparable because of the 57 games with no shifts.
+  10 shorthanded; 2023: 75, 45 and 28. 2024 has not been rechecked here since its 57 games were filled.
 - **The season totals table (from the boxscore) matches the NHL's report exactly** for all skaters:
   924 (2023), 920 (2024) and 940 (2025) skaters, with the same games played and the same total time on
   ice, in total and per player (`scripts/check_season_totals.py`). That is a different number from the
   shift-based time above, which is what the advanced stats use.
 - **By strength**, even-strength time is 0.02-0.04% below the NHL's, and power-play and
   shorthanded time is 0.17-0.26% above it (2025 and 2023; 2024 is not comparable because the
-  NHL's totals include the 57 games with no shifts). Cause not found. Strength comes from the skaters on
+  NHL's totals included the 57 games with no API shifts, which are now filled). Cause not found. Strength comes from the skaters on
   the ice, with one fewer for a team whose goalie is off the ice, and short blips of 2 seconds or
   less are smoothed.
 - **Strength at events.** Power-play goals match the boxscore for 99.96-99.98% of player-games.
@@ -77,7 +86,7 @@ and 10 player-games in the three seasons (counted before the goalie fill, not re
   2025) the NHL lists a blocker on the shooter's own team. We count the attempt for the shooter's
   team and give nobody a block. Our blocks are then 11 to 34 below the boxscore per season, so the
   boxscore does not credit these either. Whether the attempt belongs to the shooter's team is to
-  be checked against Natural Stat Trick in Phase 5.
+  be checked against Natural Stat Trick in Phase 5. Checked: our Corsi totals match NST's within 0.01%, so NST counts these attempts for the shooter's team as we do.
 - **Blocked shots** are 11-34 below the boxscore per season (99.93-99.98% of player-games
   exact), always by one. Cause not found.
 - **A goalie as shooter** (12 in 2023, 18 in 2024, 35 in 2025). The attempt counts for the team
@@ -183,7 +192,7 @@ goalies' boxscore numbers game by game.
   2024 because the code does not need shifts; shorthanded assists match for every skater, and so do
   shorthanded goals and points once the penalty-shot goals are added (see below). Shots on goal match for 99% of skaters on the power play
   (916 of 924, 915 of 920, 935 of 940) and 98-99% shorthanded. Totals are equal or within a few.
-  Strength from the shifts was exact for only 91-97% (and not for skaters in the 57 games).
+  Strength from the shifts was exact for only 91-97% (and, before the 57 games were filled, not for skaters in them).
 - **Boxscore power-play goals** match the NHL's skater report for every skater in all three seasons.
 - **Goalies' numbers leave out empty-net goals.** A goal into an empty net is charged to no goalie, but
   the NHL's skater reports and the boxscore's skater goals count it. This is the cause of the skaters'
@@ -268,3 +277,42 @@ to the totals in every row.
 The NHL's `situationCode` is not used for strength. It disagrees with the skaters on the ice at
 about 3% of stoppages, and seven 2023 events have none. Strength from the skaters on the ice
 agrees with the code at 99.86-99.91% of shot attempts.
+
+## Validation against Natural Stat Trick
+
+`scripts/check_against_nst.py` compares our player and team on-ice tables with Natural Stat Trick's
+(NST) season CSV exports (skaters and teams, 5v5 and all situations, counts, regular season). NST ids are not
+NHL ids, so skaters are matched by name and team (a traded player is one NST row), with a fallback on
+last name and games played for spelling differences such as Nick and Nicholas. All 924, 920 and 940
+skaters match in 2023, 2024 and 2025. The NST files are not committed.
+
+| All situations | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| Skaters with goals for exact | 880 of 924 | 906 of 920 | 915 of 940 |
+| Skaters with goals against exact | 899 of 924 | 907 of 920 | 927 of 940 |
+| Skaters with Corsi for exact (within 2) | 273 (667) | 262 (718) | 279 (721) |
+| Skaters with Corsi against exact (within 2) | 387 (828) | 442 (852) | 430 (857) |
+| League Corsi for, ours / NST | 793,200 / 793,189 | 777,259 / 777,260 | 760,410 / 760,411 |
+| Team goals, ours / NST | 8,070 / 8,086 | 7,894 / 7,901 | 8,080 / 8,086 |
+| Teams with time on ice within 0.1 minute | 32 of 32 | 30 of 32 | 32 of 32 |
+
+**Differences and their causes**
+- **Penalty-shot goals.** NST counts them; our shot-attempt tables do not contain them (the NHL's
+  play-by-play lists them differently). The gap in team goals is exactly the number of penalty-shot goals
+  outside shootouts (16 in 2023, 7 in 2024, 6 in 2025). Team power-play and penalty-kill goals add them
+  separately (see the power-play section).
+- **Who is on the ice at a line change.** An attempt at the second a shift ends can be credited to the
+  outgoing or incoming skaters. Testing the four boundary rules against NST (`diagnose_boundary_rules.py`)
+  gave one rule per attempt type that agrees best in both 2023 and 2025: the skaters of the defending team
+  for any non-goal attempt, and the skaters of the shooting team for a shot on goal, come from the stint that
+  ends at the attempt's second; goals are end-inclusive for both sides; missed and blocked shots are
+  start-inclusive for the shooting side. This raised per-skater exact matches (for example 2025 shots on
+  goal for 307 to 332 of 940, Corsi against 394 to 430). No rule makes per-skater Corsi exact: 72-78% of
+  skaters are within 2 attempts of NST and about 95% within 5, a mean gap of 1.6-1.8 attempts per skater. The
+  remaining difference is probably how NST processes the shift reports.
+- **5v5 time on ice.** Our 5v5 team time is 0.04-0.06% above NST's (78 minutes of 127,693 in 2025) while all-
+  situations time agrees to 0.1 minute. Splitting even-strength time by state (`diagnose_nst_time_by_strength.py`)
+  showed about 49 minutes of power-play and shorthanded time that NST has and we do not, and 29 minutes that NST
+  places in 4v4 and goalie-out states. Probably the exact second at which a penalty starts or ends or a goalie
+  leaves the ice; about 1.8 seconds per team-game. Cause not found; no stat a fan reads changes.
+- **Team shot totals** differ by 0.03-0.1% (2025 shots on goal are 0.06% above NST's). Cause not found.

@@ -2,7 +2,7 @@
 
 A data pipeline and app that gives NHL fans basic and advanced stats, and the tools to build their own analysis from them.
 
-> **Status: in development (portfolio project).** Raw ingestion, staging tables, the on-ice join and most of the metrics (season totals, advanced on-ice stats for players and teams, team records) are built. Validation against Natural Stat Trick, line and pair analysis, player comparison and the app are planned. See [Project status](#project-status).
+> **Status: in development (portfolio project).** Raw ingestion, staging tables, the on-ice join and most of the metrics (season totals, advanced on-ice stats for players and teams, team records) are built. Validation against Natural Stat Trick is done. Line and pair analysis, player comparison and the app are planned. See [Project status](#project-status).
 
 ## About
 
@@ -19,7 +19,7 @@ The advanced stats are computed in this repository from the NHL's play-by-play e
 
 **Version 1 scope:** seasons from 2023-24 onward, regular season only. Playoffs and earlier seasons come later.
 
-**What the data can't do:** the NHL's public play-by-play has no pass events, so pass-based metrics are out of scope. The NHL also returns no shift data for some games (57 games in 2024-25, for example), so those games can't contribute to on-ice stats. They are in the boxscore totals, so the app shows games played and games included in the on-ice stats side by side. Every known difference from the NHL's own numbers, and what we did about it, is in [`docs/data_notes.md`](docs/data_notes.md).
+**What the data can't do:** the NHL's public play-by-play has no pass events, so pass-based metrics are out of scope. The NHL's shift-chart API returns no shifts for some games (57 games in 2024-25); those shifts are taken from the NHL's HTML time-on-ice reports instead, which agree with the API exactly on games that have both, so every game contributes to the on-ice stats. Games with no shifts from either source would be left out and the app would show games played and games included in the on-ice stats side by side. Every known difference from the NHL's own numbers, and what we did about it, is in [`docs/data_notes.md`](docs/data_notes.md).
 
 ### How it works
 
@@ -77,6 +77,7 @@ src/nhl_pipeline/ingest/
     probe.py            Phase 0 script: fetch one game and print the response shapes
 src/nhl_pipeline/transform/
     onice.py            who was on the ice for each event (pure logic, no file access)
+    shift_reports.py    parse the NHL's HTML time-on-ice reports into shift rows (used by scripts/fill_missing_shifts.py)
     build_onice.py      build the on-ice tables for one season (command-line tool)
     shot_attempts.py, build_shot_attempts.py   one row per shot attempt, with who was on the ice
     stints.py, build_stints.py                 stretches of a period with a fixed lineup, and each side's strength
@@ -100,6 +101,9 @@ scripts/
     check_base_tables.py, check_season_totals.py, check_goalie_totals.py, check_player_faceoffs.py, check_player_special_teams.py, check_team_special_teams.py, check_player_advanced.py, check_team_advanced.py, check_team_basic.py
                         checks of each metrics table (exact identities and comparisons with the NHL's numbers)
     compare_boxscore_to_nhl.py   compare the boxscore with the NHL's official event summary pages for a sample of games
+    fill_missing_shifts.py       fill games with no API shifts from the NHL's HTML reports; check_html_shift_reports.py and compare_html_shifts.py check that the reports exist and agree with the API
+    check_against_nst.py         compare skater and team on-ice stats with Natural Stat Trick CSV exports (NST files go in data/reference/nst, not committed)
+    diagnose_nst_5v5.py, diagnose_skater_gap.py, diagnose_boundary_rules.py, diagnose_nst_time_by_strength.py   investigations of the remaining differences with Natural Stat Trick
     diagnose_shots_against_gap.py, diagnose_boxscore_vs_pbp.py, diagnose_special_teams_goals.py, diagnose_team_opportunities.py, diagnose_team_opportunities_by_game.py, diagnose_shorthanded_goals.py, diagnose_on_ice_membership.py, inspect_goal_strength.py
                         investigations of small differences between sources
 docs/
@@ -157,7 +161,14 @@ duckdb.sql("""
 """).show()
 ```
 
-**3. Build the on-ice tables.** This reads the staging tables and writes `data/intermediate/season=2023/`. Games with no shift data are skipped:
+**2b. Fill games the API has no shifts for (only if the staging step reports `none_from_nhl` games).** 57 games in 2024-25 (ids 2024021235 to 2024021291) have an empty shift chart. The NHL's HTML time-on-ice reports for them exist, so this step reads those reports, matches players to ids by jersey number through the boxscore, checks each player's total shift time against the boxscore's time on ice (it holds back a game that differs by more than 2 seconds), and adds the shifts to staging. The first command only reports; run it with `--write` when every game is clean. Re-running the staging step replaces the tables, so run this again afterwards.
+
+```
+python scripts/fill_missing_shifts.py --season 2024
+python scripts/fill_missing_shifts.py --season 2024 --write
+```
+
+**3. Build the on-ice tables.** This reads the staging tables and writes `data/intermediate/season=2023/`. Games with no shift data (after step 2b, none) are skipped:
 
 ```
 python src/nhl_pipeline/transform/build_onice.py --season 2023 --limit 20
@@ -214,7 +225,7 @@ Each table has a check script in `scripts/` (for example `python scripts/check_t
 | 2 | Staging tables | Done for all three seasons. Goals counted from events match the final score in all 3,936 games, and player goals, assists, hits, giveaways and takeaways match the boxscore exactly |
 | 3 | On-ice join of events to shifts, strength states | Done for all three seasons. On-ice counts agree with `situationCode` for 99.3-99.4% of events, and our plus/minus matches the boxscore for 99.9% of skater-games |
 | 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Skater power-play and penalty-kill stats are built (power-play goals, assists and points match the NHL's reports for every skater). Team power-play and penalty-kill percentages are built (within 0.5 points of the NHL's for every team). Skater faceoff counts and percentages are built (counts and percentages match the NHL's faceoff report for every skater, in total, by strength and by zone). Phase 4 is complete except the stats that need the xG model (high-danger goalie stats), which come after Phase 5 |
-| 5 | Validation against boxscores and Natural Stat Trick | Planned |
+| 5 | Validation against boxscores and Natural Stat Trick | Done for all three seasons. Boxscore and the NHL's reports were checked in earlier phases. Against Natural Stat Trick (skaters and teams, all situations and 5v5): league totals of shot attempts match within 0.01% for skaters and 0.03% for teams, team time on ice within 0.1 minute for 94-100% of teams, goals exact for 95-99% of skaters, and 72-78% of skaters are within 2 shot attempts of NST. The 57 games of 2024-25 with no API shifts were filled from the NHL's HTML reports. Remaining differences and their causes are in [`docs/data_notes.md`](docs/data_notes.md) |
 | 6 | Line and defense-pair analysis | Planned |
 | 7 | Player comparison (pizza charts) and similarity | Planned |
 | 8 | App (Streamlit) and deployment | Planned |

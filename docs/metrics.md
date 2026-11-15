@@ -11,7 +11,7 @@ file; if they disagree, one of them is wrong. Written for Phase 4; sections mark
 - Two sources, never mixed in one number. Simple totals (goals, assists, hits, time on ice ...) and the
   rates built from them come from the NHL boxscore, which covers every game. Stats that depend on who
   was on the ice (Corsi, relative stats, strength splits) come from our own calculations and cover
-  only games with NHL shift data (57 games in 2024-25 have none). The app shows both game counts.
+  every game that has shifts (the 57 games of 2024-25 that the NHL's shift-chart API has none for are filled from its HTML reports). The app shows both game counts.
 
 ## Building blocks
 
@@ -93,7 +93,7 @@ strength; all three seasons against the boxscore):
 | Stint strength vs the NHL's situationCode at each shot attempt | 99.86-99.91% agree |
 
 Raw skater counts and the situationCode on its own were tested and are far worse. The 57 games
-in 2024-25 with no shift data have no stints.
+in 2024-25 with no API shift data have stints too, built from the NHL's HTML time-on-ice reports.
 
 ## Base tables (built)
 
@@ -198,7 +198,7 @@ each side, no empty net), `pp`, `sh`.
 
 Percentages and rates come from the sums. A traded player has a combined row and one row per team;
 off-ice counts are per team and added for the combined row. The definition of off ice (the team's
-numbers in games he played) is ours and is to be compared with Natural Stat Trick in Phase 5.
+numbers in games he played) is ours. Compared with Natural Stat Trick in Phase 5 (see data_notes.md): league totals agree within 0.01%.
 Checked: at 5v5 total Corsi for equals total Corsi against, and equals five times the teams' 5v5
 attempts, exactly, in all three seasons; time on ice by strength agrees with the NHL's within the small
 gaps in `docs/data_notes.md` for the games covered.

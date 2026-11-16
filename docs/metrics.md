@@ -64,7 +64,7 @@ same situation.
 | Individual: iCF, iFF, iSF, G | The player's own attempts, by shooter_id |
 | Blocks | Blocked shots where the player is the blocker and the blocker is not a teammate of the shooter |
 
-High-danger chances are not defined yet. They wait for the expected-goals model (after Phase 5),
+High-danger chances are not defined yet. They wait for the expected-goals model (Phase 9, after the first version of the app is deployed),
 which will use shot locations from this table.
 
 ## stints (built)
@@ -266,4 +266,4 @@ and by zone, and so do the win percentages (to 0.1 point).
 ## Still planned
 
 xG and high-danger chances
-including goalie quality-of-shot stats (after Phase 5), lines and pairs, pizza charts and similarity.
+including goalie quality-of-shot stats (Phase 9, after version 1 of the app is deployed). Planned before that: lines and pairs, pizza charts and similarity, and the Streamlit app.

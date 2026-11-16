@@ -85,6 +85,24 @@ def code_states(attempt):
     return (strength, sf, sa, gf, ga), (MIRROR[strength], sa, sf, ga, gf)
 
 
+def credited_stints(index, attempt, kind):
+    """(stint, shooting_stint, defending_stint) for one shot attempt, or None if it is outside every stint.
+
+    `stint` is the one the attempt falls in (a goal belongs to the stint ending at its second, any other attempt to
+    the stint starting at it). The skaters credited come from shooting_stint (the shooting team's) and
+    defending_stint (the other team's): the stint ending at the attempt's second for the defending team on any
+    non-goal attempt and for the shooting team on a shot on goal (see the module docstring)."""
+    stint = index.at(attempt["game_seconds"], end_inclusive=kind == "goal")
+    if stint is None:
+        return None
+    defending_stint = shooting_stint = stint
+    if kind != "goal":
+        defending_stint = index.at(attempt["game_seconds"], end_inclusive=True) or stint
+    if kind == "sog":
+        shooting_stint = defending_stint
+    return stint, shooting_stint, defending_stint
+
+
 def build_game_tables(game, stints, attempts, events=(), records=None):
     """Player and team rows for one game, plus a Counter of things worth reporting.
 
@@ -117,17 +135,13 @@ def build_game_tables(game, stints, attempts, events=(), records=None):
         kind = KIND_BY_ATTEMPT.get(attempt["attempt_type"])
         if kind is None:
             continue
-        stint = index.at(attempt["game_seconds"], end_inclusive=attempt["attempt_type"] == "goal")
-        if stint is None:
+        credited = credited_stints(index, attempt, kind)
+        if credited is None:
             notes["attempts_outside_stints"] += 1
             continue
+        stint, shooting_stint, defending_stint = credited
         shooting = "home" if attempt["is_home"] else "away"
         defending = other_side(shooting)
-        defending_stint = shooting_stint = stint
-        if kind != "goal":
-            defending_stint = index.at(attempt["game_seconds"], end_inclusive=True) or stint
-        if kind == "sog":
-            shooting_stint = defending_stint
         shooting_state, defending_state = side_state(stint, shooting), side_state(stint, defending)
         from_code = code_states(attempt)
         if from_code is not None:

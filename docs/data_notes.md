@@ -278,6 +278,29 @@ The NHL's `situationCode` is not used for strength. It disagrees with the skater
 about 3% of stoppages, and seven 2023 events have none. Strength from the skaters on the ice
 agrees with the code at 99.86-99.91% of shot attempts.
 
+## Lines and defense pairs
+
+- **Coverage.** A line is found for 98.6-99.0% of 5v5 time and a pair about as often. The rest has a different number of
+  forwards or defensemen on the ice (a defenseman playing forward, a forward on defense, or a player who is listed as one
+  position and plays the other). It is concentrated: Anaheim in 2025 and San Jose in 2023 lose 6-8% of their 5v5 time. The
+  app should show each team's coverage. `scripts/diagnose_unit_gaps.py` lists the players involved.
+- **Positions.** A game's forwards and defensemen come from the boxscore. The labels in the display table use the position
+  listed for the player for that team over the season, not the slot he played. A line with one listed center is shown with
+  him in the middle; a line with none or two or more is shown in the order L, C, R and then by name, so its order is a
+  best guess (the players are right, the order may not be). A better order needs each player's most common slot in that
+  unit, from the per-game boxscore positions; not done in version 1.
+- **Minimum time.** Units under 60 minutes together at 5v5 are not shown. Over a season there are 18,000 to 20,000
+  line and pair combinations, of which about 870-900 reach 60 minutes.
+- **Zone starts.** Faceoffs are counted at the second they happen using the stint that starts there (the players who
+  stepped on for the faceoff). A faceoff counts at 5v5 when the NHL `situationCode` says so. A line or pair is found for
+  99.4-99.6% of 5v5 faceoff sides, and league-wide offensive-zone and defensive-zone starts differ by about 0.2% (each
+  offensive-zone faceoff of one team is a defensive-zone faceoff of the other, so the gap is the faceoffs with no unit).
+  On-the-fly changes are not counted: only faceoffs are zone starts. A shift that ends on the faceoff's second and a new
+  one that starts on it are one second apart in the data, so a faceoff right at a change can still be credited to the
+  wrong unit.
+- **Same limits as the skater tables.** Penalty-shot goals are in no unit's counts, and the boundary rules for attempts at
+  a line change are the ones in "Shots and blocks".
+
 ## Validation against Natural Stat Trick
 
 `scripts/check_against_nst.py` compares our player and team on-ice tables with Natural Stat Trick's

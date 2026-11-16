@@ -263,7 +263,35 @@ Percentages come from the sums (a traded player's combined row adds the team row
 NHL's skater faceoff report: faceoff counts match for every skater in all three seasons in total, by strength
 and by zone, and so do the win percentages (to 0.1 point).
 
+## Lines and defense pairs (built)
+
+`data/metrics/season=YYYY/unit_game_5v5.parquet`, `unit_season_5v5.parquet`, `unit_zone_starts_5v5.parquet` and the
+fan-facing `unit_season_display.parquet`.
+
+A **line** is exactly 3 forwards and a **pair** exactly 2 defensemen on the ice together at 5v5 (five skaters and a goalie
+each side). Forwards and defensemen come from the boxscore position of the game. A stint with a different number of
+forwards or defensemen (for example 4 forwards, or a defenseman playing forward) has no line or pair. A unit is the set
+of players, so the same three forwards are one line whatever the order.
+
+| Column | Meaning |
+|---|---|
+| seconds, games | 5v5 time together, and games in which they were on the ice together |
+| cf, ca, ff, fa, sf, sa, gf, ga | Shot attempts, unblocked attempts, shots on goal and goals for and against while the unit was on the ice. Same crediting rules as the skater tables, so the units a skater belongs to never add up to more than his own totals |
+| cf_pct, ff_pct, sf_pct, gf_pct | 100 x for / (for + against); empty when both are zero |
+| sh_pct, sv_pct, pdo | gf / sf, 1 - ga / sa (as percentages) and their sum (around 100) |
+| cf_per_60, ca_per_60, gf_per_60, ga_per_60 | Counts x 3600 / seconds. Rates are never averaged, always rebuilt from sums |
+| oz, dz, nz | Faceoffs at 5v5 started in the offensive, defensive and neutral zone, in the unit's own terms (the winner's zone is flipped for the other team). The unit on the ice is the one in the stint that starts at the faceoff's second |
+| oz_start_pct | 100 x oz / (oz + dz); neutral-zone faceoffs are left out |
+
+Display table (`unit_season_display.parquet`):
+- `unit_id` is team abbreviation, unit type and the sorted player ids (`ANA-line-8476460-8478398-8480014`), so the same players on the same team always get the same id, in any season.
+- `label` has last names only (a first initial when two players of a team share a last name). A line reads left wing, center, right wing, with its one listed center in the middle; a pair is alphabetical. `positions` shows the listed positions in that order, `player_1_id` to `player_3_id` the ids.
+- Units with fewer than 60 minutes together are left out (`--min-minutes` changes it). Of the 18,000 to 20,000 combinations per season, about 870-900 are kept.
+- `minutes` and `minutes_per_game`, and all the rates above, are rounded for display (percentages to 1 decimal, per-60 rates to 2).
+
+Checked with `scripts/check_line_tables.py` (the time and attempts of all the units a skater belongs to never add up to more than his own 5v5 totals, and fall short only where he was in a stint with no line or pair) and `scripts/diagnose_unit_gaps.py` (what the 5v5 time without a line or pair is made of).
+
 ## Still planned
 
 xG and high-danger chances
-including goalie quality-of-shot stats (Phase 9, after version 1 of the app is deployed). Planned before that: lines and pairs, pizza charts and similarity, and the Streamlit app.
+including goalie quality-of-shot stats (Phase 9, after version 1 of the app is deployed). Planned before that: pizza charts and similarity, and the Streamlit app.

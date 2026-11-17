@@ -301,6 +301,30 @@ agrees with the code at 99.86-99.91% of shot attempts.
 - **Same limits as the skater tables.** Penalty-shot goals are in no unit's counts, and the boundary rules for attempts at
   a line change are the ones in "Shots and blocks".
 
+## Percentiles and similarity
+
+- **A percentile is a rank, not a size.** Percentiles are ranks within a season's pool, so a stat that moved league-wide
+  between seasons does not matter and seasons are comparable as "how good in his own year". But a rank cannot show how
+  far apart two players are: the gap between the 95th and 99th percentile can be large (McDavid's assists per 60 are far
+  above everyone's). A percentile of 0 means the lowest of the pool, not zero (Quinn Hughes at 0 for blocks per 60 blocks
+  1.63 per 60, the fewest of the defensemen). The app should show the value next to the percentile.
+- **Pool minimum.** 600 minutes of 5v5 keeps about 340-350 forwards and 195-200 defensemen per season (about 11 forwards
+  and 6 defensemen per team, from `scripts/diagnose_skater_minutes.py`). A skater below it is ranked against the pool but
+  is not part of it and has no similarity list. A skater who was injured or traded can fall below it.
+- **Hits, blocks, takeaways and giveaways are counted by each arena's scorers**, so they differ from rink to rink and
+  the league totals of giveaways and takeaways moved sharply between seasons (see "Other counting stats"). Percentiles
+  within a season soften this but do not remove it. These stats are in the physical category of the similarity.
+- **Forwards and defensemen only.** Goalies are not in these tables. Forwards are one group (C, L and R together) because
+  a listed center often plays wing.
+- **All situations and 5v5 are mixed.** Goals, assists, points, shots, hits, blocks, takeaways and giveaways per 60 are
+  over all situations (the boxscore); shot attempts, shots and goals for and against and the shot shares are 5v5. The
+  stat labels say which.
+- **Similarity** compares percentiles, so entries match when their ranks are alike, not when their production is: a young
+  skater can be matched with a star whose ranks look the same. It is only as good as the 29 stats, and the physical
+  category is the noisiest (gaps of 30 or more are common between otherwise alike players). Scores are modest for the best
+  matches (80-88, an average gap of 12 to 20 percentile points). The gap per category is kept so the app can show why two
+  players match.
+
 ## Validation against Natural Stat Trick
 
 `scripts/check_against_nst.py` compares our player and team on-ice tables with Natural Stat Trick's

@@ -291,7 +291,45 @@ Display table (`unit_season_display.parquet`):
 
 Checked with `scripts/check_line_tables.py` (the time and attempts of all the units a skater belongs to never add up to more than his own 5v5 totals, and fall short only where he was in a stint with no line or pair) and `scripts/diagnose_unit_gaps.py` (what the 5v5 time without a line or pair is made of).
 
+## Percentiles and similarity (built)
+
+`data/metrics/season=YYYY/player_season_percentiles.parquet` and `data/metrics/player_similarity.parquet`
+(all seasons together), written by `build_player_percentiles.py` and `build_player_similarity.py`.
+
+**Percentiles.** One row per skater and stat. A percentile says how a skater ranks in his pool: 100 is the best of the
+pool, 50 the middle. The pool is the skaters of the same group in the same season with at least 600 minutes of 5v5
+(`--min-minutes` changes it): forwards (C, L, R, not split further, because listed centers often play wing) or
+defensemen (D). Each season is ranked on its own. A skater below the minimum is ranked against the pool and
+marked `in_pool = False`; a traded player counts once, with his combined row.
+
+| Column | Meaning |
+|---|---|
+| stat, label | The stat's key and its readable name (29 stats, in `percentiles.STATS`) |
+| value | The stat's value for the skater; time on ice per game is in minutes |
+| percentile | 100 x (pool players with a worse value + half of those with the same value) / pool size. For stats where fewer is better (attempts, shots and goals against, giveaways) the order is reversed, so a bigger percentile is always better |
+| pool_size, in_pool | Players ranked against, and whether he himself reached the minimum |
+| minutes_5v5 | His 5v5 time on ice |
+| in_default_chart | Whether the stat is on his group's default pizza chart |
+
+The 29 stats come from `player_season_display` (per-60 goals, assists, points, shots, hits, blocks, takeaways and
+giveaways over all situations, shooting percentage, time on ice per game) and `player_season_advanced` (5v5 shot
+shares, relative shot shares, individual attempts, shots and goals per 60, and on-ice attempts, shots and goals for and
+against per 60). Default charts, 8 stats each:
+- Forwards: goals per 60, assists per 60, Corsi %, Fenwick %, shot attempts for per 60, shot attempts against per 60,
+  relative Corsi %, takeaways per 60.
+- Defensemen: goals per 60, assists per 60, shot attempts for per 60, shot attempts against per 60, relative Corsi %,
+  blocks per 60, hits per 60, takeaways per 60.
+
+**Similarity.** Every skater-season in the pool (about 1,630 over three seasons) is an entry described by its
+percentiles. Forwards are compared only with forwards and defensemen with defensemen. The 29 stats are in five categories
+(scoring, shot share, shot volume, physical and defensive, usage) that count equally, so the many shot-share stats
+cannot drown out the others. The gap of a category is the root mean squared percentile difference of its stats
+(a stat either entry lacks is left out); the distance is the root mean square of the category gaps and
+`similarity = 100 - distance` (90 means about 10 percentile points apart on average). For each entry the table keeps the
+15 closest entries (`--top-n`) in `same_season` and `all_seasons` mode, with the gap per category (`gap_*`). A skater's own
+other seasons are never matches.
+
 ## Still planned
 
 xG and high-danger chances
-including goalie quality-of-shot stats (Phase 9, after version 1 of the app is deployed). Planned before that: pizza charts and similarity, and the Streamlit app.
+including goalie quality-of-shot stats (Phase 9, after version 1 of the app is deployed). Planned before that: the pizza charts and similarity views, and the Streamlit app.

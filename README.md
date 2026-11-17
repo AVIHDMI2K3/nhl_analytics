@@ -2,7 +2,7 @@
 
 A data pipeline and app that gives NHL fans basic and advanced stats, and the tools to build their own analysis from them.
 
-> **Status: in development (portfolio project).** Raw ingestion, staging tables, the on-ice join and most of the metrics (season totals, advanced on-ice stats for players and teams, team records) are built. Validation against Natural Stat Trick is done, and the line and defense-pair tables are built. Player comparison and the app are planned. See [Project status](#project-status).
+> **Status: in development (portfolio project).** Raw ingestion, staging tables, the on-ice join and most of the metrics (season totals, advanced on-ice stats for players and teams, team records) are built. Validation against Natural Stat Trick is done, and the line and defense-pair tables, the skater percentiles and the player similarity table are built. The pizza charts and the app are planned. See [Project status](#project-status).
 
 ## About
 
@@ -92,6 +92,8 @@ src/nhl_pipeline/transform/
     team_basic.py, build_team_basic.py         team record, goals, shots, hits and the like
     lines.py, line_tables.py, build_line_tables.py   forward lines (3 forwards) and defense pairs (2 defensemen) at 5v5: time together and shot attempts for and against
     zone_starts.py, build_unit_zone_starts.py  faceoffs (zone starts) of lines and pairs at 5v5, in their own terms
+    percentiles.py, build_player_percentiles.py   percentile ranks of skaters for the pizza charts (forwards against forwards, defensemen against defensemen, each season on its own)
+    similarity.py, build_player_similarity.py  the closest skaters to each skater, same season and all seasons (equal weight per category of stats)
     line_display.py, build_line_display.py     fan-facing line and pair table: id, label (LW-C-RW), positions, rates, zone starts; units under 60 minutes dropped
 scripts/
     inspect_staging.py  health check of the staging tables
@@ -105,6 +107,7 @@ scripts/
                         checks of each metrics table (exact identities and comparisons with the NHL's numbers)
     compare_boxscore_to_nhl.py   compare the boxscore with the NHL's official event summary pages for a sample of games
     fill_missing_shifts.py       fill games with no API shifts from the NHL's HTML reports; check_html_shift_reports.py and compare_html_shifts.py check that the reports exist and agree with the API
+    diagnose_skater_minutes.py   how many skaters reach each 5v5 minimum (used to choose the 600-minute pool minimum)
     check_line_tables.py, diagnose_unit_gaps.py   check that line and pair numbers add up to the skaters' 5v5 totals, and explain the 5v5 time that has no line or pair
     check_against_nst.py         compare skater and team on-ice stats with Natural Stat Trick CSV exports (NST files go in data/reference/nst, not committed)
     diagnose_nst_5v5.py, diagnose_skater_gap.py, diagnose_boundary_rules.py, diagnose_nst_time_by_strength.py   investigations of the remaining differences with Natural Stat Trick
@@ -206,7 +209,12 @@ python src/nhl_pipeline/transform/build_unit_zone_starts.py --season 2023
 python src/nhl_pipeline/transform/build_line_display.py --season 2023
 ```
 
-The line steps come last: `build_line_display.py` reads the line table, the zone starts and the skater display table.
+`build_line_display.py` reads the line table, the zone starts and the skater display table, so it runs after them. The Phase 7 tables come last. Build the percentiles for every season first: the similarity table reads all of them at once and has no `--season`.
+
+```
+python src/nhl_pipeline/transform/build_player_percentiles.py --season 2023
+python src/nhl_pipeline/transform/build_player_similarity.py
+```
 
 | Table | One row per | Contents |
 | --- | --- | --- |
@@ -236,7 +244,7 @@ Each table has a check script in `scripts/` (for example `python scripts/check_t
 | 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Skater power-play and penalty-kill stats are built (power-play goals, assists and points match the NHL's reports for every skater). Team power-play and penalty-kill percentages are built (within 0.5 points of the NHL's for every team). Skater faceoff counts and percentages are built (counts and percentages match the NHL's faceoff report for every skater, in total, by strength and by zone). Phase 4 is complete except the stats that need the xG model (high-danger goalie stats), which come in Phase 9, after the first version of the app is deployed |
 | 5 | Validation against boxscores and Natural Stat Trick | Done for all three seasons. Boxscore and the NHL's reports were checked in earlier phases. Against Natural Stat Trick (skaters and teams, all situations and 5v5): league totals of shot attempts match within 0.01% for skaters and 0.03% for teams, team time on ice within 0.1 minute for 94-100% of teams, goals exact for 95-99% of skaters, and 72-78% of skaters are within 2 shot attempts of NST. The 57 games of 2024-25 with no API shifts were filled from the NHL's HTML reports. Remaining differences and their causes are in [`docs/data_notes.md`](docs/data_notes.md) |
 | 6 | Line and defense-pair analysis | Done for all three seasons. Forward lines and defense pairs at 5v5 with time together, shot attempts, goals, percentages, per-60 rates and zone starts. A line or pair is found for 98.6-99.0% of 5v5 time and 99.4-99.6% of 5v5 faceoffs, and the units add up to the skaters' 5v5 totals with no violations. The fan-facing table keeps units with at least 60 minutes together (about 870-900 per season). Limits are in [`docs/data_notes.md`](docs/data_notes.md) |
-| 7 | Player comparison (pizza charts) and similarity | Planned |
+| 7 | Player comparison (pizza charts) and similarity | Data tables done for all three seasons: percentile ranks of every skater in 29 stats (forwards against forwards, defensemen against defensemen, each season ranked on its own, among the 195-351 skaters per group with at least 600 minutes of 5v5) and the 15 closest skaters of each pool skater, in the same season and across seasons. The charts themselves are drawn in the app (Phase 8). Limits are in [`docs/data_notes.md`](docs/data_notes.md) |
 | 8 | App (Streamlit) and deployment of version 1 (Corsi, shots and goals; no xG) | Planned |
 | 9 | xG model, then high-danger and goalie stats, added to the app as version 2 | Planned |
 

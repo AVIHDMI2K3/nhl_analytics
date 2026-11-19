@@ -161,3 +161,5 @@ cython_debug/
 
 # Ignore raw data downloaded from the unofficial NHL API, as well as any processed data that is generated from it.
 data/
+
+.vscode/

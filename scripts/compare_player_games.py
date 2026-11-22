@@ -62,9 +62,7 @@ def mark_kept(rows):
         )
         kept = []
         for row in period_rows:
-            row["kept"] = not any(
-                overlaps(row["start"], row["end"], ks, ke) for ks, ke in kept
-            )
+            row["kept"] = not any(overlaps(row["start"], row["end"], ks, ke) for ks, ke in kept)
             if row["kept"]:
                 kept.append((row["start"], row["end"]))
 
@@ -77,21 +75,31 @@ def main():
 
     nhl = fetch_games(args.player, args.season)
     shifts_path = (STAGING_ROOT / f"season={args.season}" / "shifts.parquet").as_posix()
-    staged = duckdb.connect().execute(
-        f"""
+    staged = (
+        duckdb.connect()
+        .execute(
+            f"""
         select game_id, period, shift_number, shift_id,
                start_game_seconds, end_game_seconds, duration_seconds
         from '{shifts_path}'
         where player_id = {args.player}
           and start_game_seconds is not null and end_game_seconds is not null
         """
-    ).fetchall()
+        )
+        .fetchall()
+    )
 
     games = defaultdict(list)
     for game_id, period, number, shift_id, start, end, duration in staged:
         games[game_id].append(
-            {"period": period, "shift_number": number, "shift_id": shift_id,
-             "start": start, "end": end, "duration": duration}
+            {
+                "period": period,
+                "shift_number": number,
+                "shift_id": shift_id,
+                "start": start,
+                "end": end,
+                "duration": duration,
+            }
         )
 
     differences = []

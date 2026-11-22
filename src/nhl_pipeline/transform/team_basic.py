@@ -23,9 +23,18 @@ OVERTIME_TYPES = ("OT", "SO")
 REGULAR_SEASON = 2
 BOX_SUMS = ("hits", "blocked_shots", "giveaways", "takeaways", "pim")
 COUNT_COLUMNS = (
-    "wins", "losses", "ot_losses", "points", "regulation_wins", "row",
-    "goals_for", "goals_against", "shots_for", "shots_against",
-    "pp_goals_for", "pp_goals_against",
+    "wins",
+    "losses",
+    "ot_losses",
+    "points",
+    "regulation_wins",
+    "row",
+    "goals_for",
+    "goals_against",
+    "shots_for",
+    "shots_against",
+    "pp_goals_for",
+    "pp_goals_against",
 ) + BOX_SUMS
 
 
@@ -34,9 +43,7 @@ def build_team_basic(games, box_rows):
 
     Notes: games_without_score (left out of the record). Rows have games_played and COUNT_COLUMNS.
     """
-    regular = {
-        g["game_id"]: g for g in games if g["game_type"] == REGULAR_SEASON and g["has_boxscore"]
-    }
+    regular = {g["game_id"]: g for g in games if g["game_type"] == REGULAR_SEASON and g["has_boxscore"]}
     notes = Counter()
     played = Counter()
     totals = defaultdict(Counter)

@@ -9,12 +9,23 @@ import diagnose_special_teams_goals as diagnose  # noqa: E402
 
 
 def trow(team, strength, goals, game=1, goalies_against=1):
-    return {"game_id": game, "team_id": team, "strength": strength, "for_goal": goals, "goalies_against": goalies_against}
+    return {
+        "game_id": game,
+        "team_id": team,
+        "strength": strength,
+        "for_goal": goals,
+        "goalies_against": goalies_against,
+    }
 
 
 def goalie(team, pp_against=0, sh_against=0, game=1, group="goalies"):
-    return {"game_id": game, "team_id": team, "player_group": group,
-            "power_play_goals_against": pp_against, "shorthanded_goals_against": sh_against}
+    return {
+        "game_id": game,
+        "team_id": team,
+        "player_group": group,
+        "power_play_goals_against": pp_against,
+        "shorthanded_goals_against": sh_against,
+    }
 
 
 def test_each_teams_goals_are_compared_with_the_opponents_goalies():
@@ -46,8 +57,14 @@ def test_goals_into_an_empty_net_are_counted_apart():
 
 def goal(strength_skaters, game=1, team=1, goalie_for=1, goalie_against=1):
     mine, theirs = strength_skaters
-    return {"game_id": game, "team_id": team, "skaters_for": mine, "skaters_against": theirs,
-            "goalie_for": goalie_for, "goalie_against": goalie_against}
+    return {
+        "game_id": game,
+        "team_id": team,
+        "skaters_for": mine,
+        "skaters_against": theirs,
+        "goalie_for": goalie_for,
+        "goalie_against": goalie_against,
+    }
 
 
 def test_code_strength_counts_a_pulled_goalie_as_no_skater():

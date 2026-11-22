@@ -108,10 +108,7 @@ def main():
             """
         ).fetchone()
         total, exact, higher, lower = row
-        print(
-            f"{name:28s} {total:>13} {exact:>8} {100 * exact / total:>7.2f}% "
-            f"{higher:>12} {lower:>11}"
-        )
+        print(f"{name:28s} {total:>13} {exact:>8} {100 * exact / total:>7.2f}% {higher:>12} {lower:>11}")
 
 
 if __name__ == "__main__":

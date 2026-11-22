@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from team_app import build_team_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -42,13 +41,17 @@ def main():
     missing_special = [r["team"] for r in rows if r["pp_pct"] is None]
     print(f"season {args.season}: {len(rows)} teams, {len(rows[0])} columns -> {out}")
     print(f"  teams with no 5v5 row: {missing_5v5 or 'none'}; with no special-teams row: {missing_special or 'none'}")
-    print(f"\n  {'team':<4} {'GP':>3} {'PTS':>4} {'P%':>6} {'RW':>3} {'ROW':>4} {'DIFF':>5} {'CF%':>5} {'GF%':>5} "
-          f"{'PP%':>5} {'PK%':>5}")
+    print(
+        f"\n  {'team':<4} {'GP':>3} {'PTS':>4} {'P%':>6} {'RW':>3} {'ROW':>4} {'DIFF':>5} {'CF%':>5} {'GF%':>5} "
+        f"{'PP%':>5} {'PK%':>5}"
+    )
     for r in rows:
         if r["team"] in SAMPLE_TEAMS:
-            print(f"  {r['team']:<4} {r['games_played']:>3} {r['points']:>4} {r['points_pct']:>6.3f} "
-                  f"{r['regulation_wins']:>3} {r['row']:>4} {r['goal_diff']:>5} {r['cf_pct_5v5']:>5.1f} "
-                  f"{r['gf_pct_5v5']:>5.1f} {r['pp_pct']:>5.1f} {r['pk_pct']:>5.1f}")
+            print(
+                f"  {r['team']:<4} {r['games_played']:>3} {r['points']:>4} {r['points_pct']:>6.3f} "
+                f"{r['regulation_wins']:>3} {r['row']:>4} {r['goal_diff']:>5} {r['cf_pct_5v5']:>5.1f} "
+                f"{r['gf_pct_5v5']:>5.1f} {r['pp_pct']:>5.1f} {r['pk_pct']:>5.1f}"
+            )
 
 
 if __name__ == "__main__":

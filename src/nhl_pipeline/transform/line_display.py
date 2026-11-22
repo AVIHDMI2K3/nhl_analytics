@@ -8,7 +8,8 @@ label, the players in reading order, and the rates. Only units with at least `mi
             same players on the same team always give the same id, in any season, so a unit can be followed across
             seasons through `season`.
   label     last names in reading order: a line is left wing, center, right wing ('Smith / Jones / Brown') with its
-            one listed center in the middle, a pair is alphabetical. A last name shared by two players of the team gets a first initial.
+            one listed center in the middle, a pair is alphabetical. A last name shared by two players of
+            the team gets a first initial.
   positions the listed positions in the same order, e.g. 'L-C-R'. A player's position is the one the display
             table gives him for that team. When a line has two players of one position they follow the order of the
             positions that exist (L, then C, then R), then name.
@@ -29,7 +30,7 @@ def unit_id(team_abbrev, unit_type, player_ids):
 
 
 def last_name(full_name):
-    """Everything after the first word of a full name ('Alex Newhook' -> 'Newhook', 'Mitch Del Zotto' -> 'Del Zotto')."""
+    """Everything after the first word ('Alex Newhook' -> 'Newhook', 'Mitch Del Zotto' -> 'Del Zotto')."""
     parts = (full_name or "").split()
     return " ".join(parts[1:]) if len(parts) > 1 else (parts[0] if parts else "")
 
@@ -39,6 +40,7 @@ def reading_order(player_ids, info, unit_type):
 
     A pair is by name. A line puts its one listed center in the middle and the two wingers on the sides, left wing
     before right wing (then name). With no center or with two or more, the listed order L, C, R (then name) is used."""
+
     def name_key(player_id):
         name = info.get(player_id, ("", None))[0]
         return last_name(name), name, player_id
@@ -81,7 +83,8 @@ def build_unit_display(season_rows, info, abbrevs, min_seconds=3600, zone_starts
     """Display rows for the units with at least `min_seconds` together, most time first within each team.
 
     `season_rows` come from line_tables.season_unit_rows, `info` is {(player_id, team_id): (full name, position)}
-    and `abbrevs` {team_id: abbreviation}. `zone_starts` is {(team_id, unit_type, sorted player ids): {'oz', 'dz', 'nz'}}
+    and `abbrevs` {team_id: abbreviation}. `zone_starts` is
+    {(team_id, unit_type, sorted player ids): {'oz', 'dz', 'nz'}}
     from zone_starts.season_zone_rows; a unit without faceoffs gets 0 and no start percentage."""
     by_team = {}
     for (player_id, team_id), value in info.items():
@@ -97,18 +100,27 @@ def build_unit_display(season_rows, info, abbrevs, min_seconds=3600, zone_starts
         members = {f"player_{i + 1}_id": (ordered[i] if i < len(ordered) else None) for i in range(MAX_MEMBERS)}
         row = {
             "unit_id": unit_id(abbrevs.get(team_id), unit_type, unit["player_ids"]),
-            "team_id": team_id, "team": abbrevs.get(team_id), "unit_type": unit_type,
+            "team_id": team_id,
+            "team": abbrevs.get(team_id),
+            "unit_type": unit_type,
             "label": " / ".join(short_names(ordered, team_info, repeated)),
             "positions": "-".join((team_info.get(p, ("", None))[1] or "?") for p in ordered),
             "player_names": " / ".join(team_info.get(p, (str(p), None))[0] for p in ordered),
             **members,
-            "games": unit["games"], "minutes": round(unit["seconds"] / 60, 1),
+            "games": unit["games"],
+            "minutes": round(unit["seconds"] / 60, 1),
             "minutes_per_game": round(unit["seconds"] / 60 / unit["games"], 2) if unit["games"] else None,
         }
         zones = (zone_starts or {}).get((team_id, unit_type, tuple(sorted(unit["player_ids"]))), {})
         oz, dz, nz = (zones.get(name, 0) for name in ("oz", "dz", "nz"))
-        row.update({"oz_starts": oz, "dz_starts": dz, "nz_starts": nz,
-                    "oz_start_pct": rounded(100 * oz / (oz + dz), 1) if oz + dz else None})
+        row.update(
+            {
+                "oz_starts": oz,
+                "dz_starts": dz,
+                "nz_starts": nz,
+                "oz_start_pct": rounded(100 * oz / (oz + dz), 1) if oz + dz else None,
+            }
+        )
         row.update({name: unit[name] for name in ("cf", "ca", "ff", "fa", "sf", "sa", "gf", "ga")})
         row.update({name: rounded(unit[name], 1) for name in PERCENT_COLUMNS})
         row.update({name: rounded(unit[name], 2) for name in PER_60_COLUMNS})

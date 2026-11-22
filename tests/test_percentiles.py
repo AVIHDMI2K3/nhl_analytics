@@ -6,19 +6,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src" / "nhl_pipeline" / "transform"))
 
-import pytest  # noqa: E402
-
 import percentiles as pc  # noqa: E402
+import pytest  # noqa: E402
 
 
 def display(player_id, position, goals_per_60, kind="team", team="TOR", toi=1200, **extra):
-    return {"player_id": player_id, "name": f"P{player_id}", "position": position, "kind": kind, "team": team,
-            "teams": team, "goals_per_60": goals_per_60, "toi_per_game_seconds": toi, **extra}
+    return {
+        "player_id": player_id,
+        "name": f"P{player_id}",
+        "position": position,
+        "kind": kind,
+        "team": team,
+        "teams": team,
+        "goals_per_60": goals_per_60,
+        "toi_per_game_seconds": toi,
+        **extra,
+    }
 
 
 def advanced(player_id, minutes, ca_per_60=50.0, situation="5v5", kind="team", **extra):
-    return {"player_id": player_id, "situation": situation, "kind": kind, "seconds": minutes * 60,
-            "ca_per_60": ca_per_60, **extra}
+    return {
+        "player_id": player_id,
+        "situation": situation,
+        "kind": kind,
+        "seconds": minutes * 60,
+        "ca_per_60": ca_per_60,
+        **extra,
+    }
 
 
 def rows_for(rows, stat):
@@ -41,14 +55,20 @@ def test_positions_group_into_forwards_and_defensemen_only():
 
 
 def test_forwards_and_defensemen_are_ranked_in_their_own_pool_and_a_player_below_the_minimum_is_not_in_it():
-    shown = [display(1, "C", 1.0), display(2, "L", 2.0), display(3, "R", 3.0), display(4, "D", 0.2),
-             display(5, "D", 0.4), display(6, "C", 9.0)]
+    shown = [
+        display(1, "C", 1.0),
+        display(2, "L", 2.0),
+        display(3, "R", 3.0),
+        display(4, "D", 0.2),
+        display(5, "D", 0.4),
+        display(6, "C", 9.0),
+    ]
     adv = [advanced(i, 700) for i in (1, 2, 3, 4, 5)] + [advanced(6, 100)]
     rows = rows_for(pc.build_percentile_rows(2025, shown, adv, stats=GOALS_AND_CA), "goals_per_60")
     assert rows[3]["percentile"] == pytest.approx(250 / 3) and rows[1]["percentile"] == pytest.approx(50 / 3)
-    assert rows[5]["percentile"] == 75.0 and rows[4]["percentile"] == 25.0   # defensemen only against defensemen
+    assert rows[5]["percentile"] == 75.0 and rows[4]["percentile"] == 25.0  # defensemen only against defensemen
     assert rows[1]["pool_size"] == 3 and rows[5]["pool_size"] == 2
-    assert rows[6]["in_pool"] is False and rows[6]["percentile"] == 100.0     # ranked against the pool, not part of it
+    assert rows[6]["in_pool"] is False and rows[6]["percentile"] == 100.0  # ranked against the pool, not part of it
     assert rows[6]["minutes_5v5"] == 100.0
 
 
@@ -63,8 +83,12 @@ def test_a_stat_where_fewer_is_better_is_reversed_and_time_on_ice_is_in_minutes(
 
 
 def test_a_traded_player_counts_once_with_his_combined_rows_and_missing_5v5_rows_leave_those_stats_empty():
-    shown = [display(1, "C", 1.0, kind="team", team="TOR"), display(1, "C", 3.0, kind="team", team="BOS"),
-             display(1, "C", 2.0, kind="total", team="TOT"), display(2, "C", 1.0)]
+    shown = [
+        display(1, "C", 1.0, kind="team", team="TOR"),
+        display(1, "C", 3.0, kind="team", team="BOS"),
+        display(1, "C", 2.0, kind="total", team="TOT"),
+        display(2, "C", 1.0),
+    ]
     adv = [advanced(1, 300, kind="team"), advanced(1, 300, kind="team"), advanced(1, 650, kind="total")]
     rows = pc.build_percentile_rows(2025, shown, adv, stats=GOALS_AND_CA)
     goals = rows_for(rows, "goals_per_60")
@@ -79,4 +103,7 @@ def test_default_charts_have_eight_known_stats_each_and_flag_the_rows_that_belon
     shown = [display(1, "D", 1.0)]
     rows = pc.build_percentile_rows(2025, shown, [advanced(1, 700)], stats=GOALS_AND_CA)
     assert {r["stat"]: r["in_default_chart"] for r in rows} == {
-        "goals_per_60": True, "ca_per_60": True, "toi_per_game": False}
+        "goals_per_60": True,
+        "ca_per_60": True,
+        "toi_per_game": False,
+    }

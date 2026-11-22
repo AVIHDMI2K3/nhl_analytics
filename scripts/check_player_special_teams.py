@@ -43,27 +43,49 @@ METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 CODE_KEYS = ("goals", "assists", "assists_primary", "assists_secondary", "points", "shots")
 STATE_COLUMNS = [
-    "player_id", "strength", "seconds", "for_goal", "against_goal",
-    "ind_goal", "ind_sog", "ind_miss", "ind_block", "assists_primary", "assists_secondary",
+    "player_id",
+    "strength",
+    "seconds",
+    "for_goal",
+    "against_goal",
+    "ind_goal",
+    "ind_sog",
+    "ind_miss",
+    "ind_block",
+    "assists_primary",
+    "assists_secondary",
 ]
 # NHL report field -> our key, per strength
 COUNT_FIELDS = {
     "pp": {
-        "ppGoals": "goals", "ppAssists": "assists", "ppPrimaryAssists": "assists_primary",
-        "ppSecondaryAssists": "assists_secondary", "ppPoints": "points", "ppShots": "shots",
-        "ppIndividualSatFor": "attempts", "ppTimeOnIce": "seconds",
+        "ppGoals": "goals",
+        "ppAssists": "assists",
+        "ppPrimaryAssists": "assists_primary",
+        "ppSecondaryAssists": "assists_secondary",
+        "ppPoints": "points",
+        "ppShots": "shots",
+        "ppIndividualSatFor": "attempts",
+        "ppTimeOnIce": "seconds",
     },
     "sh": {
-        "shGoals": "goals", "shAssists": "assists", "shPrimaryAssists": "assists_primary",
-        "shSecondaryAssists": "assists_secondary", "shPoints": "points", "shShots": "shots",
-        "shIndividualSatFor": "attempts", "shTimeOnIce": "seconds",
+        "shGoals": "goals",
+        "shAssists": "assists",
+        "shPrimaryAssists": "assists_primary",
+        "shSecondaryAssists": "assists_secondary",
+        "shPoints": "points",
+        "shShots": "shots",
+        "shIndividualSatFor": "attempts",
+        "shTimeOnIce": "seconds",
     },
 }
 # NHL per-60 field -> (strength, our on-ice key)
 PER_60_FIELDS = {"ppGoalsForPer60": ("pp", "gf"), "ppGoalsAgainstPer60": ("sh", "ga")}
 SECONDS_FIELD = {"pp": "ppTimeOnIce", "sh": "shTimeOnIce"}
 # NHL attempt fields -> other ways of counting our attempts to try besides 'attempts'
-ATTEMPT_VARIANTS = {"ppIndividualSatFor": ("fenwick", "goal_shot_block"), "shIndividualSatFor": ("fenwick", "goal_shot_block")}
+ATTEMPT_VARIANTS = {
+    "ppIndividualSatFor": ("fenwick", "goal_shot_block"),
+    "shIndividualSatFor": ("fenwick", "goal_shot_block"),
+}
 REPORTS = {"pp": "skater_powerplay", "sh": "skater_penaltykill"}
 
 
@@ -113,7 +135,8 @@ def skaters_with_all_games(metrics):
     """Player ids whose games included in the on-ice stats equal their games played."""
     games, included = Counter(), Counter()
     for row in pq.read_table(
-        metrics / "player_season_advanced.parquet", columns=["player_id", "kind", "situation", "games_played", "games_included"]
+        metrics / "player_season_advanced.parquet",
+        columns=["player_id", "kind", "situation", "games_played", "games_included"],
     ).to_pylist():
         if row["kind"] == "team" and row["situation"] == "all":
             games[row["player_id"]] += row["games_played"]
@@ -133,8 +156,17 @@ def load_code_counts(season):
     """Individual counts from the situation code, from shot_attempts and the goal events."""
     attempts = pq.read_table(
         METRICS_ROOT / f"season={season}" / "shot_attempts.parquet",
-        columns=["game_id", "event_id", "attempt_type", "shooter_id", "team_id",
-                 "skaters_for", "skaters_against", "goalie_for", "goalie_against"],
+        columns=[
+            "game_id",
+            "event_id",
+            "attempt_type",
+            "shooter_id",
+            "team_id",
+            "skaters_for",
+            "skaters_against",
+            "goalie_for",
+            "goalie_against",
+        ],
     ).to_pylist()
     events = pq.read_table(
         STAGING_ROOT / f"season={season}" / "events.parquet",
@@ -158,15 +190,19 @@ def main():
     ours = special_team_counts(rows)
     clean = skaters_with_all_games(metrics)
     code = load_code_counts(args.season)
-    print(f"Season {args.season}: skaters with power-play or shorthanded rows in our tables: {len(ours)}; "
-          f"skaters with shift data for every game played: {len(clean)}")
+    print(
+        f"Season {args.season}: skaters with power-play or shorthanded rows in our tables: {len(ours)}; "
+        f"skaters with shift data for every game played: {len(clean)}"
+    )
 
     def both(pairs):
         """Summary line for all skaters and for the clean ones."""
         a, c = summarize(pairs), summarize([x for x in pairs if x[2] in clean])
-        return (f"exact {a['exact']:3d}/{len(pairs)}, within 2 {a['within_2']:3d}, ours {a['ours']} NHL {a['nhl']}, "
-                f"worst {a['worst'][0]:+d} | clean: exact {c['exact']:3d}/{sum(1 for x in pairs if x[2] in clean)}, "
-                f"within 2 {c['within_2']:3d}, ours {c['ours']} NHL {c['nhl']}, worst {c['worst'][0]:+d}")
+        return (
+            f"exact {a['exact']:3d}/{len(pairs)}, within 2 {a['within_2']:3d}, ours {a['ours']} NHL {a['nhl']}, "
+            f"worst {a['worst'][0]:+d} | clean: exact {c['exact']:3d}/{sum(1 for x in pairs if x[2] in clean)}, "
+            f"within 2 {c['within_2']:3d}, ours {c['ours']} NHL {c['nhl']}, worst {c['worst'][0]:+d}"
+        )
 
     for strength, report_name in REPORTS.items():
         reference = load_report(args.season, report_name)
@@ -174,19 +210,25 @@ def main():
         label = "Power play" if strength == "pp" else "Shorthanded"
         missing = [p for p in players if p not in ours]
         seconds_field = SECONDS_FIELD[strength]
-        print(f"\n{label}: NHL skaters {len(reference)}; no row of ours for {len(missing)} of them "
-              f"(their NHL time on ice adds up to {sum(reference[p].get(seconds_field) or 0 for p in missing)} s, "
-              f"goals {sum(reference[p].get('ppGoals', reference[p].get('shGoals')) or 0 for p in missing)}); "
-              f"ours only: {len(set(ours) - set(reference))}")
+        print(
+            f"\n{label}: NHL skaters {len(reference)}; no row of ours for {len(missing)} of them "
+            f"(their NHL time on ice adds up to {sum(reference[p].get(seconds_field) or 0 for p in missing)} s, "
+            f"goals {sum(reference[p].get('ppGoals', reference[p].get('shGoals')) or 0 for p in missing)}); "
+            f"ours only: {len(set(ours) - set(reference))}"
+        )
         for field, key in COUNT_FIELDS[strength].items():
             if any(field not in reference[p] for p in players):
                 print(f"  {field:20s} the NHL report has no such field")
                 continue
             print(f"  {field:20s} {both([(ours[p][strength][key], reference[p][field] or 0, p) for p in players])}")
             if key in CODE_KEYS:
-                print(f"    from situation code {both([(code[p][strength][key], reference[p][field] or 0, p) for p in players])}")
+                print(
+                    f"    from situation code {both([(code[p][strength][key], reference[p][field] or 0, p) for p in players])}"
+                )
             for variant in ATTEMPT_VARIANTS.get(field, ()):
-                print(f"    as {variant:16s} {both([(ours[p][strength][variant], reference[p][field] or 0, p) for p in players])}")
+                print(
+                    f"    as {variant:16s} {both([(ours[p][strength][variant], reference[p][field] or 0, p) for p in players])}"
+                )
         for field, (field_strength, key) in PER_60_FIELDS.items():
             if field_strength != strength:
                 continue
@@ -198,8 +240,10 @@ def main():
                 ok = abs(value - reference[p][field]) <= 0.011
                 close += ok
                 close_clean += ok and p in clean
-            print(f"  {field:20s} {close} of {len(timed)} skaters with time on ice match to 2 decimals using the NHL's "
-                  f"seconds ({close_clean} of {len([p for p in timed if p in clean])} clean)")
+            print(
+                f"  {field:20s} {close} of {len(timed)} skaters with time on ice match to 2 decimals using the NHL's "
+                f"seconds ({close_clean} of {len([p for p in timed if p in clean])} clean)"
+            )
 
     built_path = metrics / "player_season_special_teams.parquet"
     if built_path.exists():
@@ -216,18 +260,24 @@ def main():
                 if key == "attempts" or field not in reference[players[0]]:
                     continue
                 result = summarize([(built[p][strength][key], reference[p][field] or 0, p) for p in players])
-                print(f"  {field:20s} exact {result['exact']:3d}/{len(players)}, within 2 {result['within_2']:3d}, "
-                      f"ours {result['ours']} NHL {result['nhl']}, worst {result['worst'][0]:+d}")
+                print(
+                    f"  {field:20s} exact {result['exact']:3d}/{len(players)}, within 2 {result['within_2']:3d}, "
+                    f"ours {result['ours']} NHL {result['nhl']}, worst {result['worst'][0]:+d}"
+                )
 
-    totals = pq.read_table(metrics / "player_season_totals.parquet", columns=["player_id", "power_play_goals"]).to_pylist()
+    totals = pq.read_table(
+        metrics / "player_season_totals.parquet", columns=["player_id", "power_play_goals"]
+    ).to_pylist()
     box = Counter()
     for row in totals:
         box[row["player_id"]] += row["power_play_goals"] or 0
     reference = load_report(args.season, "skater_powerplay")
     compared = [p for p in reference if p in box]
     result = summarize([(box[p], reference[p]["ppGoals"] or 0, p) for p in compared])
-    print(f"\nBoxscore power-play goals against the NHL's ppGoals: exact {result['exact']} of {len(compared)}; "
-          f"total ours {result['ours']}, NHL {result['nhl']}; largest gap {result['worst'][0]:+d} (player {result['worst'][1]})")
+    print(
+        f"\nBoxscore power-play goals against the NHL's ppGoals: exact {result['exact']} of {len(compared)}; "
+        f"total ours {result['ours']}, NHL {result['nhl']}; largest gap {result['worst'][0]:+d} (player {result['worst'][1]})"
+    )
 
 
 if __name__ == "__main__":

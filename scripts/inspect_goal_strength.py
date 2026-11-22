@@ -53,13 +53,35 @@ def main():
     staging = STAGING_ROOT / f"season={args.season}"
     metrics = METRICS_ROOT / f"season={args.season}"
 
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "home_team_id", "home_team", "away_team_id", "away_team"]
-    ).to_pylist() if g["game_id"] in wanted}
-    events = [e for e in pq.read_table(staging / "events.parquet", columns=[
-        "game_id", "event_id", "sort_order", "period", "period_type", "seconds_in_period", "game_seconds", "event_type",
-        "event_owner_team_id", "situation_code", "penalty_desc_key", "penalty_minutes", "scoring_player_id",
-    ]).to_pylist() if e["game_id"] in wanted]
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "home_team_id", "home_team", "away_team_id", "away_team"]
+        ).to_pylist()
+        if g["game_id"] in wanted
+    }
+    events = [
+        e
+        for e in pq.read_table(
+            staging / "events.parquet",
+            columns=[
+                "game_id",
+                "event_id",
+                "sort_order",
+                "period",
+                "period_type",
+                "seconds_in_period",
+                "game_seconds",
+                "event_type",
+                "event_owner_team_id",
+                "situation_code",
+                "penalty_desc_key",
+                "penalty_minutes",
+                "scoring_player_id",
+            ],
+        ).to_pylist()
+        if e["game_id"] in wanted
+    ]
     stints = [s for s in pq.read_table(metrics / "stints.parquet").to_pylist() if s["game_id"] in wanted]
 
     for game_id in args.games:
@@ -75,13 +97,19 @@ def main():
             team = game["home_team"] if scoring_is_home else game["away_team"]
             mine, theirs, strength = our_view(stint_at(game_stints, goal["game_seconds"]), scoring_is_home)
             minute, second = divmod(goal["seconds_in_period"], 60)
-            print(f"  P{goal['period']} {minute:2d}:{second:02d} {team}  situation code {goal['situation_code']}  "
-                  f"our real skaters {mine} v {theirs}, strength for {team}: {strength}")
+            print(
+                f"  P{goal['period']} {minute:2d}:{second:02d} {team}  situation code {goal['situation_code']}  "
+                f"our real skaters {mine} v {theirs}, strength for {team}: {strength}"
+            )
             for penalty in recent_penalties(game_events, goal["game_seconds"]):
-                owner = game["home_team"] if penalty["event_owner_team_id"] == game["home_team_id"] else game["away_team"]
+                owner = (
+                    game["home_team"] if penalty["event_owner_team_id"] == game["home_team_id"] else game["away_team"]
+                )
                 p_minute, p_second = divmod(penalty["game_seconds"] - 1200 * (penalty["period"] - 1), 60)
-                print(f"      penalty P{penalty['period']} {p_minute:2d}:{p_second:02d} {owner} "
-                      f"{penalty['penalty_desc_key']} {penalty['penalty_minutes']} min")
+                print(
+                    f"      penalty P{penalty['period']} {p_minute:2d}:{p_second:02d} {owner} "
+                    f"{penalty['penalty_desc_key']} {penalty['penalty_minutes']} min"
+                )
 
 
 if __name__ == "__main__":

@@ -25,7 +25,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from diagnose_team_opportunities import (  # noqa: E402
-    COUNTED_MINUTES, count_opportunities, count_opportunities_clock,
+    COUNTED_MINUTES,
+    count_opportunities,
 )
 
 RAW_ROOT = REPO_ROOT / "data" / "raw"
@@ -40,12 +41,21 @@ VARIANTS = (
     ("... and none in the last 20 s", count_opportunities, {**BASE, "late_seconds": 20}),
     ("... and none in the last 30 s", count_opportunities, {**BASE, "late_seconds": 30}),
     ("... and none in the last 60 s", count_opportunities, {**BASE, "late_seconds": 60}),
-    ("... minor vs major, none in the last 20 s", count_opportunities,
-     {**BASE, "minor_vs_major": True, "late_seconds": 20}),
-    ("... minor vs major, none in the last 30 s", count_opportunities,
-     {**BASE, "minor_vs_major": True, "late_seconds": 30}),
-    ("... minor vs major, none in the last 60 s", count_opportunities,
-     {**BASE, "minor_vs_major": True, "late_seconds": 60}),
+    (
+        "... minor vs major, none in the last 20 s",
+        count_opportunities,
+        {**BASE, "minor_vs_major": True, "late_seconds": 20},
+    ),
+    (
+        "... minor vs major, none in the last 30 s",
+        count_opportunities,
+        {**BASE, "minor_vs_major": True, "late_seconds": 30},
+    ),
+    (
+        "... minor vs major, none in the last 60 s",
+        count_opportunities,
+        {**BASE, "minor_vs_major": True, "late_seconds": 60},
+    ),
 )
 
 
@@ -135,12 +145,24 @@ def main():
 
     path = STAGING_ROOT / f"season={args.season}" / "events.parquet"
     columns = pq.ParquetFile(path).schema_arrow.names
-    wanted = ["game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id", "penalty_minutes",
-              "penalty_type_code", "penalty_desc_key"]
+    wanted = [
+        "game_id",
+        "event_type",
+        "period_type",
+        "game_seconds",
+        "event_owner_team_id",
+        "penalty_minutes",
+        "penalty_type_code",
+        "penalty_desc_key",
+    ]
     events = pq.read_table(path, columns=[c for c in wanted if c in columns]).to_pylist()
-    games = {g["game_id"]: g for g in pq.read_table(
-        STAGING_ROOT / f"season={args.season}" / "games.parquet",
-        columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            STAGING_ROOT / f"season={args.season}" / "games.parquet",
+            columns=["game_id", "home_team_id", "away_team_id"],
+        ).to_pylist()
+    }
     overtime_games = {e["game_id"] for e in events if e["period_type"] == "OT"}
     penalties = []
     for event in events:
@@ -157,16 +179,20 @@ def main():
     print(f"Season {args.season}: per-game fields (power play): {sorted(power[0])}")
     nhl_opp = {(r["gameId"], r["teamId"]): r["ppOpportunities"] for r in power}
     nhl_short = {(r["gameId"], r["teamId"]): r["timesShorthanded"] for r in kill}
-    print(f"team-games: {len(nhl_opp)} (power play), {len(nhl_short)} (penalty kill); "
-          f"NHL totals {sum(nhl_opp.values())} and {sum(nhl_short.values())}")
+    print(
+        f"team-games: {len(nhl_opp)} (power play), {len(nhl_short)} (penalty kill); "
+        f"NHL totals {sum(nhl_opp.values())} and {sum(nhl_short.values())}"
+    )
 
     results, exact = {}, {}
     for label, counter, options in VARIANTS:
         opp, short = per_game_counts(penalties, counter=counter, **options)
         a, b = compare(opp, nhl_opp), compare(short, nhl_short)
         results[label], exact[label] = (opp, short), a[0] + b[0]
-        print(f"\n{label}: opportunities exact in {a[0]} of {a[1]} team-games, times shorthanded in {b[0]} of {b[1]}"
-              f" (NHL total {sum(nhl_opp.values())}, ours {sum(opp.values())})")
+        print(
+            f"\n{label}: opportunities exact in {a[0]} of {a[1]} team-games, times shorthanded in {b[0]} of {b[1]}"
+            f" (NHL total {sum(nhl_opp.values())}, ours {sum(opp.values())})"
+        )
         print(f"  opportunities, ours minus NHL: {dict(sorted(a[2].items()))}")
 
     best = max(exact, key=exact.get)
@@ -185,8 +211,10 @@ def main():
         shown += 1
         print(f"  game {game_id} team {team}: ours {opp.get((game_id, team), 0)} NHL {value}")
         for r in sorted(penalties_by_game.get(game_id, []), key=lambda r: r["game_seconds"]):
-            print(f"      {r['game_seconds']:5d}s  {'this team' if r['event_owner_team_id'] == team else 'opponent':9s} "
-                  f"{r['penalty_minutes']:>2} min {r.get('penalty_type_code')}  {r.get('penalty_desc_key')}")
+            print(
+                f"      {r['game_seconds']:5d}s  {'this team' if r['event_owner_team_id'] == team else 'opponent':9s} "
+                f"{r['penalty_minutes']:>2} min {r.get('penalty_type_code')}  {r.get('penalty_desc_key')}"
+            )
 
 
 if __name__ == "__main__":

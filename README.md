@@ -161,6 +161,7 @@ Query the tables with DuckDB:
 
 ```python
 import duckdb
+
 duckdb.sql("""
     select event_type, count(*) as n
     from 'data/staging/season=2023/events.parquet'

@@ -25,7 +25,7 @@ sys.path.insert(0, str(REPO_ROOT / "src" / "nhl_pipeline" / "transform"))
 from check_against_nst import match_skaters, number, read_nst  # noqa: E402
 
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
-BUCKETS = ((0, 0, "none"), (1, 2, "1-2"), (3, 5, "3-5"), (6, 10, "6-10"), (11, 10 ** 9, "11 or more"))
+BUCKETS = ((0, 0, "none"), (1, 2, "1-2"), (3, 5, "3-5"), (6, 10, "6-10"), (11, 10**9, "11 or more"))
 ATTEMPT_TYPES = ("goal", "shot-on-goal", "missed-shot", "blocked-shot")
 
 
@@ -52,8 +52,15 @@ def summarize(rows):
     grouped = {label: [] for _, _, label in BUCKETS}
     for count, gap in rows:
         grouped[bucket_of(count)].append(abs(gap))
-    return {label: (len(gaps), sum(1 for g in gaps if g == 0), sum(1 for g in gaps if g <= 2),
-                    sum(gaps) / len(gaps) if gaps else None) for label, gaps in grouped.items()}
+    return {
+        label: (
+            len(gaps),
+            sum(1 for g in gaps if g == 0),
+            sum(1 for g in gaps if g <= 2),
+            sum(gaps) / len(gaps) if gaps else None,
+        )
+        for label, gaps in grouped.items()
+    }
 
 
 def main():
@@ -64,13 +71,17 @@ def main():
     import pyarrow.parquet as pq
 
     metrics = METRICS_ROOT / f"season={args.season}"
-    attempts = pq.read_table(metrics / "shot_attempts.parquet", columns=[
-        "attempt_type", "matches_situation", "skater_ids_for", "skater_ids_against"]).to_pylist()
+    attempts = pq.read_table(
+        metrics / "shot_attempts.parquet",
+        columns=["attempt_type", "matches_situation", "skater_ids_for", "skater_ids_against"],
+    ).to_pylist()
     mismatches = mismatched_attempts_by_player(attempts)
     total_attempts = sum(1 for a in attempts if a["attempt_type"] in ATTEMPT_TYPES)
     flagged = sum(1 for a in attempts if a["attempt_type"] in ATTEMPT_TYPES and a["matches_situation"] is False)
-    print(f"Season {args.season}: {flagged} of {total_attempts} attempts ({100 * flagged / total_attempts:.2f}%) have an on-ice list "
-          f"that disagrees with the situation code")
+    print(
+        f"Season {args.season}: {flagged} of {total_attempts} attempts ({100 * flagged / total_attempts:.2f}%) have an on-ice list "
+        f"that disagrees with the situation code"
+    )
 
     players = pq.read_table(metrics / "player_season_advanced.parquet").to_pylist()
     ours = [r for r in players if r["situation"] == "all" and (r["kind"] == "total" or r["teams"] == r["team"])]

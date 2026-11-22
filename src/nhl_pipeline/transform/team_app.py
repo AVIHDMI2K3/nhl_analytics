@@ -13,29 +13,73 @@ columns rather than being dropped.
 """
 
 TEAM_NAMES = {
-    "ANA": "Anaheim Ducks", "ARI": "Arizona Coyotes", "BOS": "Boston Bruins", "BUF": "Buffalo Sabres",
-    "CAR": "Carolina Hurricanes", "CBJ": "Columbus Blue Jackets", "CGY": "Calgary Flames",
-    "CHI": "Chicago Blackhawks", "COL": "Colorado Avalanche", "DAL": "Dallas Stars", "DET": "Detroit Red Wings",
-    "EDM": "Edmonton Oilers", "FLA": "Florida Panthers", "LAK": "Los Angeles Kings", "MIN": "Minnesota Wild",
-    "MTL": "Montreal Canadiens", "NJD": "New Jersey Devils", "NSH": "Nashville Predators",
-    "NYI": "New York Islanders", "NYR": "New York Rangers", "OTT": "Ottawa Senators",
-    "PHI": "Philadelphia Flyers", "PIT": "Pittsburgh Penguins", "SEA": "Seattle Kraken", "SJS": "San Jose Sharks",
-    "STL": "St. Louis Blues", "TBL": "Tampa Bay Lightning", "TOR": "Toronto Maple Leafs",
-    "UTA": "Utah Mammoth", "VAN": "Vancouver Canucks", "VGK": "Vegas Golden Knights",
-    "WPG": "Winnipeg Jets", "WSH": "Washington Capitals",
+    "ANA": "Anaheim Ducks",
+    "ARI": "Arizona Coyotes",
+    "BOS": "Boston Bruins",
+    "BUF": "Buffalo Sabres",
+    "CAR": "Carolina Hurricanes",
+    "CBJ": "Columbus Blue Jackets",
+    "CGY": "Calgary Flames",
+    "CHI": "Chicago Blackhawks",
+    "COL": "Colorado Avalanche",
+    "DAL": "Dallas Stars",
+    "DET": "Detroit Red Wings",
+    "EDM": "Edmonton Oilers",
+    "FLA": "Florida Panthers",
+    "LAK": "Los Angeles Kings",
+    "MIN": "Minnesota Wild",
+    "MTL": "Montreal Canadiens",
+    "NJD": "New Jersey Devils",
+    "NSH": "Nashville Predators",
+    "NYI": "New York Islanders",
+    "NYR": "New York Rangers",
+    "OTT": "Ottawa Senators",
+    "PHI": "Philadelphia Flyers",
+    "PIT": "Pittsburgh Penguins",
+    "SEA": "Seattle Kraken",
+    "SJS": "San Jose Sharks",
+    "STL": "St. Louis Blues",
+    "TBL": "Tampa Bay Lightning",
+    "TOR": "Toronto Maple Leafs",
+    "UTA": "Utah Mammoth",
+    "VAN": "Vancouver Canucks",
+    "VGK": "Vegas Golden Knights",
+    "WPG": "Winnipeg Jets",
+    "WSH": "Washington Capitals",
 }
 # Utah's name changed after the 2024 season (coded 2024 is 2024-25).
 TEAM_NAME_BY_SEASON = {("UTA", 2024): "Utah Hockey Club", ("UTA", 2023): "Utah Hockey Club"}
 
 BASIC_COLUMNS = (
-    "games_played", "wins", "losses", "ot_losses", "points", "points_pct", "regulation_wins", "row",
-    "goals_for", "goals_against", "goal_diff", "shots_for_per_game", "shots_against_per_game",
-    "hits", "blocked_shots", "giveaways", "takeaways", "pim",
+    "games_played",
+    "wins",
+    "losses",
+    "ot_losses",
+    "points",
+    "points_pct",
+    "regulation_wins",
+    "row",
+    "goals_for",
+    "goals_against",
+    "goal_diff",
+    "shots_for_per_game",
+    "shots_against_per_game",
+    "hits",
+    "blocked_shots",
+    "giveaways",
+    "takeaways",
+    "pim",
 )
 ADVANCED_COLUMNS = ("cf", "ca", "cf_pct", "ff", "fa", "ff_pct", "sf", "sa", "sf_pct", "gf", "ga", "gf_pct")
 SPECIAL_COLUMNS = (
-    "pp_opportunities", "pp_goals", "pp_pct", "times_shorthanded", "pk_goals_against", "pk_pct",
-    "sh_goals_for", "sh_goals_against",
+    "pp_opportunities",
+    "pp_goals",
+    "pp_pct",
+    "times_shorthanded",
+    "pk_goals_against",
+    "pk_pct",
+    "sh_goals_for",
+    "sh_goals_against",
 )
 DECIMALS = {"points_pct": 3, "shots_for_per_game": 1, "shots_against_per_game": 1, "pp_pct": 1, "pk_pct": 1}
 
@@ -60,8 +104,12 @@ def build_team_rows(basic, advanced, special):
         key = (b["season"], b["team_id"])
         a = adv.get(key)
         s = spe.get(key)
-        row = {"season": b["season"], "team_id": b["team_id"], "team": b["team"],
-               "team_name": team_name(b["team"], b["season"])}
+        row = {
+            "season": b["season"],
+            "team_id": b["team_id"],
+            "team": b["team"],
+            "team_name": team_name(b["team"], b["season"]),
+        }
         for col in BASIC_COLUMNS:
             row[col] = _rounded(col, b[col])
         for col in ADVANCED_COLUMNS:

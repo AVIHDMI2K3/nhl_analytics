@@ -84,9 +84,7 @@ def build_game_shot_attempts(game, events, on_ice_by_event):
             skaters_for, goalie_for = code["away_skaters"], code["away_goalie"]
             skaters_against, goalie_against = code["home_skaters"], code["home_goalie"]
 
-        penalty_shot = code is not None and is_penalty_shot(
-            skaters_for, goalie_for, skaters_against, goalie_against
-        )
+        penalty_shot = code is not None and is_penalty_shot(skaters_for, goalie_for, skaters_against, goalie_against)
         score_for, score_against = score[owner], score[opponent]
         if event["event_type"] == SCORE_EVENT_TYPE:
             score[owner] += 1

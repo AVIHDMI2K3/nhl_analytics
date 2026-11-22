@@ -181,9 +181,7 @@ def parse_events(game_id, pbp):
             "period_type": period_info.get("periodType"),
             "time_in_period": play.get("timeInPeriod"),
             "seconds_in_period": elapsed,
-            "game_seconds": (start + elapsed)
-            if start is not None and elapsed is not None
-            else None,
+            "game_seconds": (start + elapsed) if start is not None and elapsed is not None else None,
             "seconds_remaining_in_period": clock_to_seconds(play.get("timeRemaining")),
             "event_type": play.get("typeDescKey"),
             "event_type_code": play.get("typeCode"),
@@ -231,12 +229,8 @@ def parse_shifts(game_id, shiftchart):
                 "shift_number": item.get("shiftNumber"),
                 "start_seconds_in_period": start,
                 "end_seconds_in_period": end,
-                "start_game_seconds": offset + start
-                if offset is not None and start is not None
-                else None,
-                "end_game_seconds": offset + end
-                if offset is not None and end is not None
-                else None,
+                "start_game_seconds": offset + start if offset is not None and start is not None else None,
+                "end_game_seconds": offset + end if offset is not None and end is not None else None,
                 "duration_seconds": clock_to_seconds(item.get("duration")),
             }
         )
@@ -311,10 +305,7 @@ def check_goals(game, event_rows):
         else:
             away_score -= 1
     if (home_goals, away_goals) != (home_score, away_score):
-        return (
-            f"events {home_goals}-{away_goals} (home-away) vs "
-            f"score {home_score}-{away_score}"
-        )
+        return f"events {home_goals}-{away_goals} (home-away) vs score {home_score}-{away_score}"
     return None
 
 

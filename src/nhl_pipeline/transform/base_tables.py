@@ -53,12 +53,8 @@ KIND_BY_ATTEMPT = {
 }
 KINDS = tuple(KIND_BY_ATTEMPT.values())
 STATE_COLUMNS = ("strength", "skaters_for", "skaters_against", "goalies_for", "goalies_against")
-TEAM_COUNT_COLUMNS = (
-    ["seconds"] + [f"for_{k}" for k in KINDS] + [f"against_{k}" for k in KINDS]
-)
-PLAYER_COUNT_COLUMNS = (
-    TEAM_COUNT_COLUMNS + [f"ind_{k}" for k in KINDS] + ["blocks_made"] + list(EVENT_COLUMNS)
-)
+TEAM_COUNT_COLUMNS = ["seconds"] + [f"for_{k}" for k in KINDS] + [f"against_{k}" for k in KINDS]
+PLAYER_COUNT_COLUMNS = TEAM_COUNT_COLUMNS + [f"ind_{k}" for k in KINDS] + ["blocks_made"] + list(EVENT_COLUMNS)
 
 
 CODE_FIELDS = ("skaters_for", "skaters_against", "goalie_for", "goalie_against")

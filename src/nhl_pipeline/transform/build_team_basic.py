@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from build_season_display import team_abbrevs
 from team_basic import COUNT_COLUMNS, build_team_basic
 
@@ -23,12 +22,27 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 GAME_COLUMNS = [
-    "game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id",
-    "home_score", "away_score", "last_period_type",
+    "game_id",
+    "game_type",
+    "has_boxscore",
+    "home_team_id",
+    "away_team_id",
+    "home_score",
+    "away_score",
+    "last_period_type",
 ]
 BOX_COLUMNS = [
-    "game_id", "team_id", "player_group", "sog", "hits", "blocked_shots", "giveaways",
-    "takeaways", "pim", "power_play_goals", "power_play_goals_against",
+    "game_id",
+    "team_id",
+    "player_group",
+    "sog",
+    "hits",
+    "blocked_shots",
+    "giveaways",
+    "takeaways",
+    "pim",
+    "power_play_goals",
+    "power_play_goals_against",
 ]
 DERIVED = ["goal_diff"] + [f"{n}_per_game" for n in ("goals_for", "goals_against", "shots_for", "shots_against")]
 SCHEMA = pa.schema(
@@ -63,12 +77,17 @@ def main():
     out = args.metrics_root / f"season={args.season}" / "team_season_basic.parquet"
     write_table(out, rows)
 
-    print(f"Season {args.season}: {len(rows)} teams, games left out for a missing score: {notes['games_without_score']}")
+    print(
+        f"Season {args.season}: {len(rows)} teams, games left out for a missing score: {notes['games_without_score']}"
+    )
     print(f"Written to {out}")
     print("\nStandings by points (W-L-OTL):")
     for r in sorted(rows, key=lambda r: (-r["points"], -r["regulation_wins"])):
-        print(f"  {r['team']:4s} GP {r['games_played']:3d}  {r['wins']:2d}-{r['losses']:2d}-{r['ot_losses']:2d}  "
-              f"PTS {r['points']:3d}  RW {r['regulation_wins']:2d}  ROW {r['row']:2d}  GF {r['goals_for']:3d}  GA {r['goals_against']:3d}")
+        print(
+            f"  {r['team']:4s} GP {r['games_played']:3d}  {r['wins']:2d}-{r['losses']:2d}-{r['ot_losses']:2d}  "
+            f"PTS {r['points']:3d}  RW {r['regulation_wins']:2d}  ROW {r['row']:2d}  "
+            f"GF {r['goals_for']:3d}  GA {r['goals_against']:3d}"
+        )
 
 
 if __name__ == "__main__":

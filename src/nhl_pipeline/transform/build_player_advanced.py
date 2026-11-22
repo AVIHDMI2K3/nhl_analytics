@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from advanced_stats import COUNT_COLUMNS, RATE_COLUMNS, build_advanced_counts, build_advanced_display
 from build_season_display import full_names, team_abbrevs
 
@@ -25,9 +24,19 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 SCHEMA = pa.schema(
-    [("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position", pa.string()),
-     ("kind", pa.string()), ("team_id", pa.int64()), ("team", pa.string()), ("teams", pa.string()),
-     ("situation", pa.string()), ("games_played", pa.int64()), ("games_included", pa.int64())]
+    [
+        ("season", pa.int64()),
+        ("player_id", pa.int64()),
+        ("name", pa.string()),
+        ("position", pa.string()),
+        ("kind", pa.string()),
+        ("team_id", pa.int64()),
+        ("team", pa.string()),
+        ("teams", pa.string()),
+        ("situation", pa.string()),
+        ("games_played", pa.int64()),
+        ("games_included", pa.int64()),
+    ]
     + [(column, pa.int64()) for column in COUNT_COLUMNS]
     + [(column, pa.float64()) for column in RATE_COLUMNS]
 )
@@ -62,16 +71,23 @@ def main():
     by_situation = {}
     for row in rows:
         by_situation[row["situation"]] = by_situation.get(row["situation"], 0) + 1
-    print(f"Season {args.season}: {len(rows)} rows; by situation: " + ", ".join(f"{k} {v}" for k, v in by_situation.items()))
+    print(
+        f"Season {args.season}: {len(rows)} rows; by situation: "
+        + ", ".join(f"{k} {v}" for k, v in by_situation.items())
+    )
     print(f"Written to {out}")
     shown = [
-        r for r in rows
+        r
+        for r in rows
         if r["situation"] == "5v5" and (r["kind"] == "total" or r["teams"] == r["team"]) and r["seconds"] >= 600 * 60
     ]
     print("\n5v5 leaders by Corsi % (at least 600 minutes at 5v5):")
     for r in sorted(shown, key=lambda r: -r["cf_pct"])[:8]:
-        print(f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}/{r['games_included']:3d}  TOI {r['seconds'] / 60:7.1f}  "
-              f"CF {r['cf']:5d} CA {r['ca']:5d}  CF% {r['cf_pct']:5.1f}  CF% rel {r['cf_pct_rel']:+5.1f}")
+        print(
+            f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}/{r['games_included']:3d}  "
+            f"TOI {r['seconds'] / 60:7.1f}  "
+            f"CF {r['cf']:5d} CA {r['ca']:5d}  CF% {r['cf_pct']:5.1f}  CF% rel {r['cf_pct_rel']:+5.1f}"
+        )
 
 
 if __name__ == "__main__":

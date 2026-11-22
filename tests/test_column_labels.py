@@ -7,13 +7,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src" / "nhl_pipeline" / "transform"))
 
+import column_labels as cl  # noqa: E402
 import pytest  # noqa: E402
 
-import column_labels as cl  # noqa: E402
-
 APP_DATA = ROOT / "app_data" / "season=2025"
-TABLE_FILES = {"players": "player_season_app", "teams": "team_season_app", "goalies": "goalie_season_display",
-               "lines": "unit_season_display"}
+TABLE_FILES = {
+    "players": "player_season_app",
+    "teams": "team_season_app",
+    "goalies": "goalie_season_display",
+    "lines": "unit_season_display",
+}
 TABLES = tuple(TABLE_FILES)
 
 
@@ -70,6 +73,7 @@ def test_columns_match_the_app_data_files(table):
     if not path.is_file():
         pytest.skip("app_data/ not exported yet")
     import pyarrow.parquet as pq
+
     in_file = set(pq.read_table(path).schema.names)
     listed = set(cl.all_columns(table))
     assert in_file - listed == set(), f"columns in {path.name} with no label entry"

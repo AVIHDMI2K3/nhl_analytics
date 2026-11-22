@@ -38,9 +38,14 @@ SHIFT_COLUMNS = ("seconds", "team_seconds", "gf", "ga")
 CODE_COLUMNS = ("goals", "assists_primary", "assists_secondary", "assists", "points", "shots")
 INCLUDED_COLUMNS = ("included_goals", "included_assists", "included_points", "included_shots")
 COUNT_COLUMNS = SHIFT_COLUMNS[:2] + CODE_COLUMNS + SHIFT_COLUMNS[2:] + INCLUDED_COLUMNS
-PER_60 = (("goals", "included_goals"), ("assists", "included_assists"), ("points", "included_points"),
-          ("shots", "included_shots"),
-          ("gf", "gf"), ("ga", "ga"))
+PER_60 = (
+    ("goals", "included_goals"),
+    ("assists", "included_assists"),
+    ("points", "included_points"),
+    ("shots", "included_shots"),
+    ("gf", "gf"),
+    ("ga", "ga"),
+)
 RATE_COLUMNS = ["toi_per_game_seconds", "team_share_pct", "shooting_pct"] + [f"{name}_per_60" for name, _ in PER_60]
 
 
@@ -55,8 +60,11 @@ def code_strength(attempt):
 
 def goal_assists(events):
     """{(game_id, event_id): (first assist player id, second assist player id)} for the goal events."""
-    return {(e["game_id"], e["event_id"]): (e["assist1_player_id"], e["assist2_player_id"])
-            for e in events if e["event_type"] == "goal"}
+    return {
+        (e["game_id"], e["event_id"]): (e["assist1_player_id"], e["assist2_player_id"])
+        for e in events
+        if e["event_type"] == "goal"
+    }
 
 
 def individual_counts_from_code(attempts, assists, games=None):
@@ -90,8 +98,7 @@ def individual_counts_from_code(attempts, assists, games=None):
         team, game_id = attempt["team_id"], attempt["game_id"]
         is_goal = attempt["attempt_type"] == "goal"
         if attempt["shooter_id"] is not None:
-            credit(attempt["shooter_id"], team, situation, game_id,
-                   shots=1, goals=int(is_goal), points=int(is_goal))
+            credit(attempt["shooter_id"], team, situation, game_id, shots=1, goals=int(is_goal), points=int(is_goal))
         if is_goal:
             first, second = assists.get((game_id, attempt["event_id"]), (None, None))
             for player, kind in ((first, "assists_primary"), (second, "assists_secondary")):
@@ -118,9 +125,13 @@ def shift_counts(player_rows, team_rows):
         games[(row["player_id"], row["team_id"])].add(row["game_id"])
         if row["strength"] not in SITUATIONS:
             continue
-        player_game[(row["game_id"], row["player_id"], row["team_id"], row["strength"])].update({
-            "seconds": row["seconds"] or 0, "gf": row["for_goal"] or 0, "ga": row["against_goal"] or 0,
-        })
+        player_game[(row["game_id"], row["player_id"], row["team_id"], row["strength"])].update(
+            {
+                "seconds": row["seconds"] or 0,
+                "gf": row["for_goal"] or 0,
+                "ga": row["against_goal"] or 0,
+            }
+        )
 
     totals = defaultdict(Counter)
     for (game_id, player_id, team_id, situation), counts in player_game.items():
@@ -152,6 +163,12 @@ def add_special_rates(row):
 def build_special_teams_display(totals, games, season_rows, names, team_abbrevs):
     """Fan-facing rows, laid out like the advanced on-ice table (see build_advanced_display)."""
     return build_advanced_display(
-        totals, Counter(games), season_rows, names, team_abbrevs,
-        situations=SITUATIONS, columns=COUNT_COLUMNS, add_rates_to=add_special_rates,
+        totals,
+        Counter(games),
+        season_rows,
+        names,
+        team_abbrevs,
+        situations=SITUATIONS,
+        columns=COUNT_COLUMNS,
+        add_rates_to=add_special_rates,
     )

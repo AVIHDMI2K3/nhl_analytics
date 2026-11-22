@@ -21,7 +21,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from rawstore import (
     has_empty_marker,
     raw_path,
@@ -274,9 +273,7 @@ def stage_game(raw_root, season, game_id, schedule_row):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Build the staging tables for one season from the raw files."
-    )
+    parser = argparse.ArgumentParser(description="Build the staging tables for one season from the raw files.")
     parser.add_argument("--season", type=int, required=True)
     parser.add_argument("--limit", type=int, help="stage only the first N games (a trial run)")
     parser.add_argument("--raw-root", type=Path, default=DEFAULT_RAW_ROOT)
@@ -296,17 +293,12 @@ def main():
     print(f"Staging {len(game_ids)} games for season {args.season} ...")
 
     out = args.staging_root / f"season={args.season}"
-    writers = {
-        table: TableWriter(out / f"{table}.parquet", table)
-        for table in ("players", "events", "shifts")
-    }
+    writers = {table: TableWriter(out / f"{table}.parquet", table) for table in ("players", "events", "shifts")}
     games_rows, box_all = [], []
     pending = {"players": [], "events": [], "shifts": []}
     try:
         for index, game_id in enumerate(game_ids, start=1):
-            game, players, events, shifts, box_rows = stage_game(
-                args.raw_root, args.season, game_id, schedule[game_id]
-            )
+            game, players, events, shifts, box_rows = stage_game(args.raw_root, args.season, game_id, schedule[game_id])
             games_rows.append(game)
             box_all.extend(box_rows)
             pending["players"].extend(players)
@@ -335,15 +327,9 @@ def main():
         "shift_status": dict(Counter(g["shift_status"] for g in games_rows)),
         "games_without_events": [g["game_id"] for g in games_rows if not g["has_events"]],
         "games_without_boxscore": [g["game_id"] for g in games_rows if not g["has_boxscore"]],
-        "goal_mismatches": {
-            g["game_id"]: g["goals_check"] for g in games_rows if g["goals_check"]
-        },
-        "games_with_backwards_shifts": [
-            g["game_id"] for g in games_rows if g["shifts_backwards"]
-        ],
-        "games_with_overlapping_shifts": [
-            g["game_id"] for g in games_rows if g["shifts_overlapping"]
-        ],
+        "goal_mismatches": {g["game_id"]: g["goals_check"] for g in games_rows if g["goals_check"]},
+        "games_with_backwards_shifts": [g["game_id"] for g in games_rows if g["shifts_backwards"]],
+        "games_with_overlapping_shifts": [g["game_id"] for g in games_rows if g["shifts_overlapping"]],
     }
     args.log_dir.mkdir(parents=True, exist_ok=True)
     report_path = args.log_dir / f"staging_report_{args.season}.json"

@@ -63,7 +63,7 @@ def main():
         """
     ).show()
 
-    print(f"2. Most common (situationCode, on-ice) pairs among the disagreements")
+    print("2. Most common (situationCode, on-ice) pairs among the disagreements")
     con.sql(
         f"""
         select event_type, situation_code as code, {ON_ICE} as on_ice, count(*) as events

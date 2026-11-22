@@ -76,7 +76,8 @@ def main():
         exact, total, mine, theirs, worst = compare({k: v[column] for k, v in season_rows.items()}, nhl)
         print(f"  {column:18s} exact {exact:2d}/{total}  ours {mine} NHL {theirs}  worst {worst:+d}")
     for label, column, report, field in (
-        ("power-play %", "pp_pct", "power", "powerPlayPct"), ("penalty-kill %", "pk_pct", "kill", "penaltyKillPct"),
+        ("power-play %", "pp_pct", "power", "powerPlayPct"),
+        ("penalty-kill %", "pk_pct", "kill", "penaltyKillPct"),
     ):
         diffs = []
         for r in seasonal[report]:
@@ -84,8 +85,10 @@ def main():
             if nhl_value is not None and mine is not None:
                 diffs.append((mine - nhl_value, season_rows[r["teamId"]]["team"]))
         worst = max(diffs, key=lambda d: abs(d[0]))
-        print(f"  {label:15s} mean |difference| {sum(abs(d) for d, _ in diffs) / len(diffs):.2f} points, "
-              f"worst {worst[0]:+.2f} ({worst[1]}), within 0.5 points for {sum(1 for d, _ in diffs if abs(d) <= 0.5)} of {len(diffs)} teams")
+        print(
+            f"  {label:15s} mean |difference| {sum(abs(d) for d, _ in diffs) / len(diffs):.2f} points, "
+            f"worst {worst[0]:+.2f} ({worst[1]}), within 0.5 points for {sum(1 for d, _ in diffs if abs(d) <= 0.5)} of {len(diffs)} teams"
+        )
 
 
 if __name__ == "__main__":

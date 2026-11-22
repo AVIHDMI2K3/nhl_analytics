@@ -28,8 +28,15 @@ STAGING_ROOT = REPO_ROOT / "data" / "staging"
 INTERMEDIATE_ROOT = REPO_ROOT / "data" / "intermediate"
 SHOT_TYPES = ("goal", "shot-on-goal")
 EVENT_COLUMNS = [
-    "game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
-    "shooting_player_id", "scoring_player_id", "goalie_in_net_id", "shot_type",
+    "game_id",
+    "event_type",
+    "period_type",
+    "game_seconds",
+    "event_owner_team_id",
+    "shooting_player_id",
+    "scoring_player_id",
+    "goalie_in_net_id",
+    "shot_type",
 ]
 
 
@@ -92,7 +99,11 @@ def report_goal_shot_type(events_by_game, box_by_game):
         cross.update(tally_skater_games(shots, {pid: r["sog"] for pid, r in skaters.items()}))
         if box_by_game and any("goals" in r for r in skaters.values()):
             for event in shots:
-                if event["event_type"] == "goal" and event["shot_type"] is None and event["scoring_player_id"] in skaters:
+                if (
+                    event["event_type"] == "goal"
+                    and event["shot_type"] is None
+                    and event["scoring_player_id"] in skaters
+                ):
                     row = skaters[event["scoring_player_id"]]
                     goals_above_sog[row["goals"] > row["sog"]] += 1
     print("1. Goals without a shot type")
@@ -101,8 +112,10 @@ def report_goal_shot_type(events_by_game, box_by_game):
     for (has_goal, difference), n in sorted(cross.items()):
         print(f"    no-type goal: {str(has_goal):5s}  difference {difference:+d}: {n}")
     if goals_above_sog:
-        print(f"  scorers of those goals whose boxscore goals exceed their shots on goal: "
-              f"{goals_above_sog[True]} of {sum(goals_above_sog.values())}")
+        print(
+            f"  scorers of those goals whose boxscore goals exceed their shots on goal: "
+            f"{goals_above_sog[True]} of {sum(goals_above_sog.values())}"
+        )
     else:
         print("  (the boxscore table has no 'goals' column, so goals vs shots on goal was not checked)")
 
@@ -131,18 +144,25 @@ def report_goalie_rows(games, events_by_game, goalies_of_team, raw_by_game, kept
             status = fill_status(rows[defending]["kept"], rows[defending]["dropped"], event["game_seconds"], is_goal)
             statuses[(kind, status)] += 1
             if kind == "empty net" and status == "kept":
-                near = edge_distance([r for r in rows[defending]["kept"] if covers(r, event["game_seconds"], is_goal)], event["game_seconds"])
+                near = edge_distance(
+                    [r for r in rows[defending]["kept"] if covers(r, event["game_seconds"], is_goal)],
+                    event["game_seconds"],
+                )
                 kept_distance[min(near, 10)] += 1
             if status == "fillable":
                 covering = [r for r in rows[defending]["dropped"] if covers(r, event["game_seconds"])]
                 filled_rows[(kind, covering[0]["start"], covering[0]["end"])] += 1
     print("\n2. Goalie rows dropped by cleaning: would 'fill from a dropped row' be safe?")
     for kind in ("names a goalie", "empty net"):
-        print(f"  shots where the play-by-play {kind}: "
-              f"covered by a kept goalie row {statuses[(kind, 'kept')]}, "
-              f"only by a dropped row {statuses[(kind, 'fillable')]}, "
-              f"by no row {statuses[(kind, 'uncovered')]}")
-    print("  empty-net shots that a kept goalie row still covers: seconds to that row's nearest edge (10 = 10 or more):")
+        print(
+            f"  shots where the play-by-play {kind}: "
+            f"covered by a kept goalie row {statuses[(kind, 'kept')]}, "
+            f"only by a dropped row {statuses[(kind, 'fillable')]}, "
+            f"by no row {statuses[(kind, 'uncovered')]}"
+        )
+    print(
+        "  empty-net shots that a kept goalie row still covers: seconds to that row's nearest edge (10 = 10 or more):"
+    )
     print("   ", dict(sorted(kept_distance.items())))
     print("  the dropped rows that would be used: (kind, start, end): shots")
     for key, n in sorted(filled_rows.items()):
@@ -155,9 +175,13 @@ def main():
     args = parser.parse_args()
     staging = STAGING_ROOT / f"season={args.season}"
 
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
-    ).to_pylist() if g["game_type"] == 2 and g["has_boxscore"]}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
+        ).to_pylist()
+        if g["game_type"] == 2 and g["has_boxscore"]
+    }
     events_by_game, box_by_game, goalies_of_team = defaultdict(list), defaultdict(list), defaultdict(dict)
     for row in pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist():
         if row["game_id"] in games:
@@ -176,10 +200,13 @@ def main():
     ).to_pylist():
         if row["game_id"] in games and row["player_id"] in goalies_of_team[row["game_id"]]:
             raw_by_game[row["game_id"]].append(row)
-    kept_keys = {(r["game_id"], r["player_id"], r["start_game_seconds"], r["end_game_seconds"]) for r in pq.read_table(
-        INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet",
-        columns=["game_id", "player_id", "start_game_seconds", "end_game_seconds"],
-    ).to_pylist()}
+    kept_keys = {
+        (r["game_id"], r["player_id"], r["start_game_seconds"], r["end_game_seconds"])
+        for r in pq.read_table(
+            INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet",
+            columns=["game_id", "player_id", "start_game_seconds", "end_game_seconds"],
+        ).to_pylist()
+    }
 
     print(f"Season {args.season}: {len(games)} games\n")
     report_goal_shot_type(events_by_game, box_by_game)

@@ -6,9 +6,7 @@ Teams: home = 1 (goalie 10, skaters 11-15), away = 2 (goalie 40, skaters 21-25).
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import base_tables  # noqa: E402
 import stints  # noqa: E402
@@ -18,8 +16,13 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 
 def shift(player, team, start, end, goalie=False):
     return {
-        "game_id": 1, "player_id": player, "team_id": team, "period": 1,
-        "start_game_seconds": start, "end_game_seconds": end, "is_goalie": goalie,
+        "game_id": 1,
+        "player_id": player,
+        "team_id": team,
+        "period": 1,
+        "start_game_seconds": start,
+        "end_game_seconds": end,
+        "is_goalie": goalie,
     }
 
 
@@ -32,7 +35,9 @@ def ice(start, end, home=range(11, 16), away=range(21, 26)):
 
 def event(event_type, time, owner, period_type="REG", **fields):
     row = {
-        "event_type": event_type, "game_seconds": time, "event_owner_team_id": owner,
+        "event_type": event_type,
+        "game_seconds": time,
+        "event_owner_team_id": owner,
         "period_type": period_type,
     }
     row.update(fields)
@@ -112,7 +117,9 @@ def test_penalties_use_the_end_inclusive_rule():
 
 
 def test_stats_land_in_the_state_of_the_players_own_team():
-    players, _ = tables(ice(0, 60, home=range(11, 15)), [event("hit", 30, 2, hitting_player_id=21, hittee_player_id=11)])
+    players, _ = tables(
+        ice(0, 60, home=range(11, 15)), [event("hit", 30, 2, hitting_player_id=21, hittee_player_id=11)]
+    )
     assert find(players, player_id=21, strength="pp")["hits_made"] == 1
     assert find(players, player_id=11, strength="sh")["hits_taken"] == 1
 
@@ -129,9 +136,7 @@ def test_goalie_events_and_shootout_events_are_not_credited_to_skater_rows():
 
 
 def test_a_player_off_the_ice_is_credited_on_the_side_the_owner_team_implies():
-    players, notes = tables(
-        ice(0, 60), [event("hit", 30, 1, hitting_player_id=99, hittee_player_id=98)]
-    )
+    players, notes = tables(ice(0, 60), [event("hit", 30, 1, hitting_player_id=99, hittee_player_id=98)])
     assert find(players, player_id=99)["hits_made"] == 1 and find(players, player_id=99)["team_id"] == 1
     assert find(players, player_id=98)["hits_taken"] == 1 and find(players, player_id=98)["team_id"] == 2
     assert notes["actor_not_on_ice"] == 2
@@ -143,8 +148,6 @@ def test_a_player_whose_team_differs_from_the_owner_is_counted_in_the_notes():
 
 
 def test_events_outside_every_stint_are_counted_and_other_event_types_ignored():
-    players, notes = tables(
-        ice(0, 60), [event("hit", 500, 1, hitting_player_id=11), event("stoppage", 30, 1)]
-    )
+    players, notes = tables(ice(0, 60), [event("hit", 500, 1, hitting_player_id=11), event("stoppage", 30, 1)])
     assert notes["events_outside_stints"] == 1
     assert all(r["hits_made"] == 0 for r in players)

@@ -74,8 +74,12 @@ def membership_counts(stints_by_game, goals, window=0):
         if current is None:
             continue
         shooting = "home" if goal["is_home"] else "away"
-        if strength_from_counts(goal["skaters_for"], goal["goalie_for"],
-                                goal["skaters_against"], goal["goalie_against"]) != "pp":
+        if (
+            strength_from_counts(
+                goal["skaters_for"], goal["goalie_for"], goal["skaters_against"], goal["goalie_against"]
+            )
+            != "pp"
+        ):
             continue
         for side, situation in ((shooting, "pp"), (SIDES[1 - SIDES.index(shooting)], "sh")):
             key = f"{side}_skater_ids"
@@ -122,20 +126,37 @@ def main():
     args = parser.parse_args()
 
     import pyarrow.parquet as pq
-    from check_player_special_teams import load_report, skaters_with_all_games, special_team_counts, STATE_COLUMNS
+    from check_player_special_teams import STATE_COLUMNS, load_report, skaters_with_all_games, special_team_counts
 
     metrics = REPO_ROOT / "data" / "metrics" / f"season={args.season}"
     stints = defaultdict(list)
-    for row in pq.read_table(metrics / "stints.parquet", columns=[
-            "game_id", "start_game_seconds", "end_game_seconds", "home_skater_ids", "away_skater_ids"]).to_pylist():
+    for row in pq.read_table(
+        metrics / "stints.parquet",
+        columns=["game_id", "start_game_seconds", "end_game_seconds", "home_skater_ids", "away_skater_ids"],
+    ).to_pylist():
         stints[row["game_id"]].append(row)
     for rows in stints.values():
         rows.sort(key=lambda r: r["start_game_seconds"])
-    goals = [r for r in pq.read_table(metrics / "shot_attempts.parquet", columns=[
-        "game_id", "game_seconds", "attempt_type", "is_home", "skaters_for", "skaters_against",
-        "goalie_for", "goalie_against"]).to_pylist() if r["attempt_type"] == "goal"]
-    table = special_team_counts(pq.read_table(metrics / "player_game_strength.parquet",
-                                              columns=STATE_COLUMNS).to_pylist())
+    goals = [
+        r
+        for r in pq.read_table(
+            metrics / "shot_attempts.parquet",
+            columns=[
+                "game_id",
+                "game_seconds",
+                "attempt_type",
+                "is_home",
+                "skaters_for",
+                "skaters_against",
+                "goalie_for",
+                "goalie_against",
+            ],
+        ).to_pylist()
+        if r["attempt_type"] == "goal"
+    ]
+    table = special_team_counts(
+        pq.read_table(metrics / "player_game_strength.parquet", columns=STATE_COLUMNS).to_pylist()
+    )
     clean = skaters_with_all_games(metrics)
 
     for situation, (field, key, report, _) in FIELDS.items():
@@ -143,17 +164,25 @@ def main():
         players = [p for p in reference if p in clean]
         label = "Power play, goals for" if situation == "pp" else "Penalty kill, goals against"
         base = membership_counts(stints, goals, window=0)
-        same = sum(1 for p in players if base.get((p, situation), Counter())["ours"] == table.get(p, {}).get(situation, Counter())[key])
-        print(f"\nSeason {args.season} {label} ({len(players)} skaters with shift data in every game); "
-              f"our rebuilt count equals the built table's for {same} of them")
+        same = sum(
+            1
+            for p in players
+            if base.get((p, situation), Counter())["ours"] == table.get(p, {}).get(situation, Counter())[key]
+        )
+        print(
+            f"\nSeason {args.season} {label} ({len(players)} skaters with shift data in every game); "
+            f"our rebuilt count equals the built table's for {same} of them"
+        )
         for window in (0, 1):
             counts = membership_counts(stints, goals, window=window)
             s = explain(counts, reference, situation, players)
-            print(f"  window {window}s: {s['exact']} of {s['skaters']} match the NHL's goals; "
-                  f"{s['differ']} differ (sum of gaps {s['gap_total']:+d}): "
-                  f"{s['explained']} could be closed by line-change goals, "
-                  f"{s['differ'] - s['explained']} could not ({s['none_movable']} of those have no movable goal at all); "
-                  f"matching skaters that also had line-change goals: {s['exact_with_line_change_goals']}")
+            print(
+                f"  window {window}s: {s['exact']} of {s['skaters']} match the NHL's goals; "
+                f"{s['differ']} differ (sum of gaps {s['gap_total']:+d}): "
+                f"{s['explained']} could be closed by line-change goals, "
+                f"{s['differ'] - s['explained']} could not ({s['none_movable']} of those have no movable goal at all); "
+                f"matching skaters that also had line-change goals: {s['exact_with_line_change_goals']}"
+            )
 
 
 if __name__ == "__main__":

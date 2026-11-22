@@ -64,8 +64,16 @@ def test_real_style_header_split_over_two_rows_and_blank_means_zero():
     players, _, problems = cmp.read_official(REAL_STYLE)
     assert not problems
     assert players[("away", 3)] == {
-        "goals": 0, "assists": 0, "plus_minus": -1, "pim": 2, "toi_seconds": 1278,
-        "sog": 1, "hits": 2, "giveaways": 0, "takeaways": 1, "blocked_shots": 4,
+        "goals": 0,
+        "assists": 0,
+        "plus_minus": -1,
+        "pim": 2,
+        "toi_seconds": 1278,
+        "sog": 1,
+        "hits": 2,
+        "giveaways": 0,
+        "takeaways": 1,
+        "blocked_shots": 4,
     }
     assert players[("home", 20)]["goals"] == 1 and players[("home", 20)]["plus_minus"] == 2
     assert ("away", 30) not in players  # goalies are skipped

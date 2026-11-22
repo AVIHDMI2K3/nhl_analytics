@@ -1,6 +1,7 @@
 """Phase 6: build the fan-facing line and defense-pair table for one season.
 
-Run from the repo root with the `nhl` conda environment active, after build_line_tables.py, build_unit_zone_starts.py and build_season_display.py:
+Run from the repo root with the `nhl` conda environment active, after build_line_tables.py,
+build_unit_zone_starts.py and build_season_display.py:
 
     python src/nhl_pipeline/transform/build_line_display.py --season 2025
     python src/nhl_pipeline/transform/build_line_display.py --season 2025 --min-minutes 100
@@ -18,7 +19,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from build_season_display import full_names, team_abbrevs, write_table
 from line_display import MAX_MEMBERS, build_unit_display
 
@@ -26,11 +26,30 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 DEFAULT_MIN_MINUTES = 60
-RATE_NAMES = ("cf_pct", "ff_pct", "sf_pct", "gf_pct", "sh_pct", "sv_pct", "pdo", "cf_per_60", "ca_per_60",
-              "gf_per_60", "ga_per_60")
+RATE_NAMES = (
+    "cf_pct",
+    "ff_pct",
+    "sf_pct",
+    "gf_pct",
+    "sh_pct",
+    "sv_pct",
+    "pdo",
+    "cf_per_60",
+    "ca_per_60",
+    "gf_per_60",
+    "ga_per_60",
+)
 SCHEMA = pa.schema(
-    [("season", pa.int64()), ("unit_id", pa.string()), ("team_id", pa.int64()), ("team", pa.string()),
-     ("unit_type", pa.string()), ("label", pa.string()), ("positions", pa.string()), ("player_names", pa.string())]
+    [
+        ("season", pa.int64()),
+        ("unit_id", pa.string()),
+        ("team_id", pa.int64()),
+        ("team", pa.string()),
+        ("unit_type", pa.string()),
+        ("label", pa.string()),
+        ("positions", pa.string()),
+        ("player_names", pa.string()),
+    ]
     + [(f"player_{i + 1}_id", pa.int64()) for i in range(MAX_MEMBERS)]
     + [("games", pa.int64()), ("minutes", pa.float64()), ("minutes_per_game", pa.float64())]
     + [("oz_starts", pa.int64()), ("dz_starts", pa.int64()), ("nz_starts", pa.int64()), ("oz_start_pct", pa.float64())]
@@ -55,25 +74,32 @@ def main():
         if row["kind"] == "team":
             info[(row["player_id"], row["team_id"])] = (names.get(row["player_id"]) or row["name"], row["position"])
     season_rows = pq.read_table(metrics / "unit_season_5v5.parquet").to_pylist()
-    zone_starts = {(z["team_id"], z["unit_type"], tuple(sorted(z["player_ids"]))): z for z in pq.read_table(
-        metrics / "unit_zone_starts_5v5.parquet").to_pylist()}
-    rows = build_unit_display(season_rows, info, abbrevs, min_seconds=int(args.min_minutes * 60),
-                              zone_starts=zone_starts)
+    zone_starts = {
+        (z["team_id"], z["unit_type"], tuple(sorted(z["player_ids"]))): z
+        for z in pq.read_table(metrics / "unit_zone_starts_5v5.parquet").to_pylist()
+    }
+    rows = build_unit_display(
+        season_rows, info, abbrevs, min_seconds=int(args.min_minutes * 60), zone_starts=zone_starts
+    )
     for row in rows:
         row["season"] = args.season
     write_table(metrics / "unit_season_display.parquet", rows, SCHEMA)
 
-    print(f"season {args.season}: {len(rows)} units with at least {args.min_minutes:g} minutes "
-          f"(of {len(season_rows)}) -> {metrics / 'unit_season_display.parquet'}")
+    print(
+        f"season {args.season}: {len(rows)} units with at least {args.min_minutes:g} minutes "
+        f"(of {len(season_rows)}) -> {metrics / 'unit_season_display.parquet'}"
+    )
     unknown = sum(1 for r in rows if "?" in r["positions"])
     print(f"units with a player whose position is unknown: {unknown}")
     for team in ("TOR", "BOS", "EDM"):
         for unit_type in ("line", "pair"):
             top = [r for r in rows if r["team"] == team and r["unit_type"] == unit_type][:3]
             for r in top:
-                print(f"  {team} {unit_type:4} {r['label']:<42} {r['positions']:<6} {r['minutes']:>6.1f} min "
-                      f"{r['games']:>3} gp  CF% {r['cf_pct']:.1f}  GF% {r['gf_pct']}  "
-                      f"OZ start% {r['oz_start_pct']}")
+                print(
+                    f"  {team} {unit_type:4} {r['label']:<42} {r['positions']:<6} {r['minutes']:>6.1f} min "
+                    f"{r['games']:>3} gp  CF% {r['cf_pct']:.1f}  GF% {r['gf_pct']}  "
+                    f"OZ start% {r['oz_start_pct']}"
+                )
 
 
 if __name__ == "__main__":

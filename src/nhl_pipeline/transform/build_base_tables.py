@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from base_tables import (
     KINDS,
     PLAYER_COUNT_COLUMNS,
@@ -40,14 +39,35 @@ METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 LOG_DIR = REPO_ROOT / "data" / "logs"
 STRENGTHS = ("ev", "pp", "sh")
 EVENT_COLUMNS = [
-    "game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
-    "assist1_player_id", "assist2_player_id", "hitting_player_id", "hittee_player_id", "player_id",
-    "winning_player_id", "losing_player_id", "committed_by_player_id", "drawn_by_player_id",
+    "game_id",
+    "event_type",
+    "period_type",
+    "game_seconds",
+    "event_owner_team_id",
+    "assist1_player_id",
+    "assist2_player_id",
+    "hitting_player_id",
+    "hittee_player_id",
+    "player_id",
+    "winning_player_id",
+    "losing_player_id",
+    "committed_by_player_id",
+    "drawn_by_player_id",
     "penalty_minutes",
 ]
 ATTEMPT_COLUMNS = [
-    "game_id", "event_id", "game_seconds", "attempt_type", "shooter_id", "blocker_id",
-    "blocker_is_teammate", "is_home", "skaters_for", "skaters_against", "goalie_for", "goalie_against",
+    "game_id",
+    "event_id",
+    "game_seconds",
+    "attempt_type",
+    "shooter_id",
+    "blocker_id",
+    "blocker_is_teammate",
+    "is_home",
+    "skaters_for",
+    "skaters_against",
+    "goalie_for",
+    "goalie_against",
 ]
 
 STATE_TYPES = [("strength", pa.string())] + [(name, pa.int64()) for name in STATE_COLUMNS[1:]]
@@ -95,9 +115,7 @@ def main():
         ).to_pylist()
     }
     stints = group_by_game(pq.read_table(metrics / "stints.parquet").to_pylist())
-    attempts = group_by_game(
-        pq.read_table(metrics / "shot_attempts.parquet", columns=ATTEMPT_COLUMNS).to_pylist()
-    )
+    attempts = group_by_game(pq.read_table(metrics / "shot_attempts.parquet", columns=ATTEMPT_COLUMNS).to_pylist())
 
     events = group_by_game(
         pq.read_table(args.staging_root / f"season={args.season}" / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
@@ -133,8 +151,10 @@ def main():
     print("Player seconds by strength: " + ", ".join(f"{s} {seconds[s]}" for s in STRENGTHS))
     print("Attempts counted: " + ", ".join(f"{k} {counted[k]}" for k in KINDS))
     print(f"Attempts outside every stint (not counted): {notes['attempts_outside_stints']}")
-    print(f"Attempts counted under the situationCode state: {notes['state_from_code']}, "
-          f"of which different from the stint's state: {notes['state_differs_from_stint']}")
+    print(
+        f"Attempts counted under the situationCode state: {notes['state_from_code']}, "
+        f"of which different from the stint's state: {notes['state_differs_from_stint']}"
+    )
     print(f"Shooter not on the ice in his stint (credited anyway): {notes['shooter_not_on_ice']}")
     print(f"Goalie as shooter (counted for the team and skaters, no skater row): {notes['goalie_shooter']}")
     print(f"Goalies named in other events (no skater row): {notes['goalie_event']}")

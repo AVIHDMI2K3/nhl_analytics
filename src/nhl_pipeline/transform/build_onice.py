@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from onice import build_event_on_ice, clean_shifts, game_plus_minus, shifts_of_game_teams
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -192,15 +191,28 @@ def main():
     events = read_columns(
         staging / "events.parquet",
         [
-            "game_id", "event_id", "sort_order", "period", "period_type", "game_seconds",
-            "event_type", "situation_code", "event_owner_team_id",
+            "game_id",
+            "event_id",
+            "sort_order",
+            "period",
+            "period_type",
+            "game_seconds",
+            "event_type",
+            "situation_code",
+            "event_owner_team_id",
         ],
     )
     shifts = read_columns(
         staging / "shifts.parquet",
         [
-            "game_id", "player_id", "team_id", "period", "shift_number", "shift_id",
-            "start_game_seconds", "end_game_seconds",
+            "game_id",
+            "player_id",
+            "team_id",
+            "period",
+            "shift_number",
+            "shift_id",
+            "start_game_seconds",
+            "end_game_seconds",
         ],
     )
     box = read_columns(
@@ -274,10 +286,7 @@ def main():
         for writer in writers.values():
             writer.close()
 
-    plus_minus_rows = [
-        {"game_id": g, "player_id": p, "plus_minus": v}
-        for (g, p), v in sorted(ours_plus_minus.items())
-    ]
+    plus_minus_rows = [{"game_id": g, "player_id": p, "plus_minus": v} for (g, p), v in sorted(ours_plus_minus.items())]
     pm_writer = TableWriter(out / "player_game_plus_minus.parquet", "player_game_plus_minus")
     pm_writer.write(plus_minus_rows)
     pm_writer.close()
@@ -285,10 +294,7 @@ def main():
     compared = totals["matches"] + totals["mismatches"]
     agreement = 100 * totals["matches"] / compared if compared else 0.0
     print(f"\nTables written to {out}")
-    print(
-        f"Shift rows dropped as duplicates or overlaps: {totals['shift_rows_dropped']} "
-        f"of {totals['shift_rows']}"
-    )
+    print(f"Shift rows dropped as duplicates or overlaps: {totals['shift_rows_dropped']} of {totals['shift_rows']}")
     print(f"Shift rows removed because the team is not in the game: {totals['shift_rows_other_teams']}")
     print(f"Events: {totals['events']}  (no situationCode: {totals['no_code']})")
     print(f"On-ice counts agree with situationCode: {agreement:.2f}% of {compared} events")
@@ -326,8 +332,7 @@ def main():
         "events_using_conflicting_shift": totals["conflict_events"],
         "mismatches_using_conflicting_shift": totals["conflict_mismatches"],
         "agreement_by_event_type": {
-            t: {"events": c["events"], "compared": c["compared"], "matches": c["matches"]}
-            for t, c in by_type.items()
+            t: {"events": c["events"], "compared": c["compared"], "matches": c["matches"]} for t, c in by_type.items()
         },
         "games_with_most_disagreements": per_game_mismatches.most_common(10),
         "plus_minus": {

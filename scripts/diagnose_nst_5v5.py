@@ -23,14 +23,29 @@ sys.path.insert(0, str(REPO_ROOT / "src" / "nhl_pipeline" / "transform"))
 
 from base_tables import KIND_BY_ATTEMPT, code_states  # noqa: E402
 from check_against_nst import TEAM_NAMES, normalize_name, number, read_nst  # noqa: E402
-from stints import StintIndex, other_side, side_state  # noqa: E402
+from stints import StintIndex, side_state  # noqa: E402
 
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 FIVE_ON_FIVE = ("ev", 5, 5, 1, 1)
-ATTEMPT_COLUMNS = ["game_id", "game_seconds", "attempt_type", "team_id", "opponent_team_id", "is_home",
-                   "skaters_for", "skaters_against", "goalie_for", "goalie_against"]
-STAT_KINDS = {"cf": ("goal", "sog", "miss", "block"), "ff": ("goal", "sog", "miss"), "sf": ("goal", "sog"), "gf": ("goal",)}
+ATTEMPT_COLUMNS = [
+    "game_id",
+    "game_seconds",
+    "attempt_type",
+    "team_id",
+    "opponent_team_id",
+    "is_home",
+    "skaters_for",
+    "skaters_against",
+    "goalie_for",
+    "goalie_against",
+]
+STAT_KINDS = {
+    "cf": ("goal", "sog", "miss", "block"),
+    "ff": ("goal", "sog", "miss"),
+    "sf": ("goal", "sog"),
+    "gf": ("goal",),
+}
 
 
 def is_five_on_five(state):
@@ -78,8 +93,16 @@ def count_five_on_five(attempts, stints_by_game):
         if by_stint:
             add_attempt(counts["stint"], attempt["team_id"], attempt["opponent_team_id"], kind)
         if by_code != by_stint:
-            differing.append({"attempt": attempt, "stint": stint, "by_code": by_code, "by_stint": by_stint,
-                              "code_state": code_state, "stint_state": stint_state})
+            differing.append(
+                {
+                    "attempt": attempt,
+                    "stint": stint,
+                    "by_code": by_code,
+                    "by_stint": by_stint,
+                    "code_state": code_state,
+                    "stint_state": stint_state,
+                }
+            )
     return counts, differing
 
 
@@ -102,14 +125,17 @@ def main():
     parser.add_argument("--examples", type=int, default=20)
     args = parser.parse_args()
     import pyarrow.parquet as pq
-
     from build_season_display import team_abbrevs
 
     staging = STAGING_ROOT / f"season={args.season}"
     metrics = METRICS_ROOT / f"season={args.season}"
     abbrevs = team_abbrevs(staging)
-    games = {g["game_id"]: {"home": g["home_team_id"], "away": g["away_team_id"]} for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
+    games = {
+        g["game_id"]: {"home": g["home_team_id"], "away": g["away_team_id"]}
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]
+        ).to_pylist()
+    }
     stints_by_game = defaultdict(list)
     for stint in pq.read_table(metrics / "stints.parquet").to_pylist():
         stints_by_game[stint["game_id"]].append(stint)
@@ -128,29 +154,39 @@ def main():
         row = nst.get(abbrev)
         if row is None:
             continue
-        values = {name: (number(row[name.upper()]), counts["code"][(team_id, name)], counts["stint"][(team_id, name)])
-                  for name in totals}
+        values = {
+            name: (number(row[name.upper()]), counts["code"][(team_id, name)], counts["stint"][(team_id, name)])
+            for name in totals
+        }
         for name, triple in values.items():
             for i in range(3):
                 totals[name][i] += triple[i]
-        print(f"  {abbrev:4s} {values['cf'][0]:6.0f}/{values['cf'][1]:5d}/{values['cf'][2]:5d} "
-              f"{values['gf'][0]:5.0f}/{values['gf'][1]:4d}/{values['gf'][2]:4d} {values['ga'][0]:5.0f}/{values['ga'][1]:4d}/{values['ga'][2]:4d}"
-              f"  {number(row['TOI']):8.1f} / {minutes.get(team_id, 0):8.1f}")
+        print(
+            f"  {abbrev:4s} {values['cf'][0]:6.0f}/{values['cf'][1]:5d}/{values['cf'][2]:5d} "
+            f"{values['gf'][0]:5.0f}/{values['gf'][1]:4d}/{values['gf'][2]:4d} {values['ga'][0]:5.0f}/{values['ga'][1]:4d}/{values['ga'][2]:4d}"
+            f"  {number(row['TOI']):8.1f} / {minutes.get(team_id, 0):8.1f}"
+        )
     print("\nLeague totals, NST / code state / stint state:")
     for name, (nst_total, code_total, stint_total) in totals.items():
-        print(f"  {name.upper():3s} {nst_total:9.0f} {code_total:9d} {stint_total:9d}   code {code_total - nst_total:+.0f}, stint {stint_total - nst_total:+.0f}")
+        print(
+            f"  {name.upper():3s} {nst_total:9.0f} {code_total:9d} {stint_total:9d}   code {code_total - nst_total:+.0f}, stint {stint_total - nst_total:+.0f}"
+        )
 
     only_code = [d for d in differing if d["by_code"]]
     only_stint = [d for d in differing if d["by_stint"]]
-    print(f"\nAttempts that are 5v5 under one rule only: {len(only_code)} by the code only, {len(only_stint)} by the stint only")
+    print(
+        f"\nAttempts that are 5v5 under one rule only: {len(only_code)} by the code only, {len(only_stint)} by the stint only"
+    )
     for label, items in (("by the code only", only_code), ("by the stint only", only_stint)):
         kinds = Counter(KIND_BY_ATTEMPT[d["attempt"]["attempt_type"]] for d in items)
         print(f"  {label}: {dict(kinds)}")
         for d in items[: args.examples]:
             a, s = d["attempt"], d["stint"]
-            print(f"    game {a['game_id']} second {a['game_seconds']:4d} {a['attempt_type']:13s} code counts "
-                  f"{a['skaters_for']}v{a['skaters_against']} goalies {a['goalie_for']}/{a['goalie_against']}; stint "
-                  f"{s['start_game_seconds']}-{s['end_game_seconds']} state {d['stint_state'][1:]} ({d['stint_state'][0]})")
+            print(
+                f"    game {a['game_id']} second {a['game_seconds']:4d} {a['attempt_type']:13s} code counts "
+                f"{a['skaters_for']}v{a['skaters_against']} goalies {a['goalie_for']}/{a['goalie_against']}; stint "
+                f"{s['start_game_seconds']}-{s['end_game_seconds']} state {d['stint_state'][1:]} ({d['stint_state'][0]})"
+            )
 
 
 if __name__ == "__main__":

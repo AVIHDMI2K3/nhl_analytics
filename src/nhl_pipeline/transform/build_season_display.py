@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from season_display import GOALIE_RATE_COLUMNS, RATE_COLUMNS, build_goalie_display, build_season_display
 from season_totals import GOALIE_COLUMNS, SUM_COLUMNS
 
@@ -25,8 +24,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 IDENTITY_FIELDS = [
-    ("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position", pa.string()),
-    ("kind", pa.string()), ("team_id", pa.int64()), ("team", pa.string()), ("teams", pa.string()),
+    ("season", pa.int64()),
+    ("player_id", pa.int64()),
+    ("name", pa.string()),
+    ("position", pa.string()),
+    ("kind", pa.string()),
+    ("team_id", pa.int64()),
+    ("team", pa.string()),
+    ("teams", pa.string()),
     ("games_played", pa.int64()),
 ]
 SCHEMA = pa.schema(
@@ -85,19 +90,26 @@ def main():
     write_table(out, rows)
 
     kinds = {k: sum(1 for r in rows if r["kind"] == k) for k in ("total", "team")}
-    print(f"Season {args.season}: {len(rows)} rows ({kinds['team']} team rows, {kinds['total']} combined rows for traded players)")
+    print(
+        f"Season {args.season}: {len(rows)} rows ({kinds['team']} team rows, "
+        f"{kinds['total']} combined rows for traded players)"
+    )
     print(f"Written to {out}")
     shown = [r for r in rows if r["kind"] != "team" or r["teams"] == r["team"]]
     print("\nTop 10 by points (one line per player, traded players combined):")
     for r in sorted(shown, key=lambda r: (-r["points"], -r["goals"]))[:10]:
-        print(f"  {r['name']:24s} {r['team']:4s} {r['position']:2s} GP {r['games_played']:3d}  G {r['goals']:3d}  "
-              f"A {r['assists']:3d}  P {r['points']:3d}  +/- {r['plus_minus']:+4d}  P/60 {r['points_per_60']:.2f}")
+        print(
+            f"  {r['name']:24s} {r['team']:4s} {r['position']:2s} GP {r['games_played']:3d}  G {r['goals']:3d}  "
+            f"A {r['assists']:3d}  P {r['points']:3d}  +/- {r['plus_minus']:+4d}  P/60 {r['points_per_60']:.2f}"
+        )
     traded = [r for r in rows if r["kind"] == "total"][:3]
     if traded:
         print("\nA few traded players (combined line first, then each team):")
         for total in traded:
             for r in [x for x in rows if x["player_id"] == total["player_id"]]:
-                print(f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}  G {r['goals']:3d}  P {r['points']:3d}")
+                print(
+                    f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}  G {r['goals']:3d}  P {r['points']:3d}"
+                )
 
     goalie_totals = pq.read_table(metrics / "goalie_season_totals.parquet").to_pylist()
     goalie_rows = build_goalie_display(goalie_totals, full_names(staging), team_abbrevs(staging))
@@ -109,9 +121,11 @@ def main():
     print("Top 10 by games started (one line per goalie, traded goalies combined):")
     shown_goalies = [r for r in goalie_rows if r["kind"] != "team" or r["teams"] == r["team"]]
     for r in sorted(shown_goalies, key=lambda r: -r["games_started"])[:10]:
-        print(f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}  GS {r['games_started']:3d}  "
-              f"W {r['wins']:2d}  L {r['losses']:2d}  OTL {r['ot_losses']:2d}  SV% {r['save_pct']:.2f}  "
-              f"GAA {r['goals_against_avg']:.2f}  SO {r['shutouts']:2d}")
+        print(
+            f"  {r['name']:24s} {r['team']:4s} GP {r['games_played']:3d}  GS {r['games_started']:3d}  "
+            f"W {r['wins']:2d}  L {r['losses']:2d}  OTL {r['ot_losses']:2d}  SV% {r['save_pct']:.2f}  "
+            f"GAA {r['goals_against_avg']:.2f}  SO {r['shutouts']:2d}"
+        )
 
 
 if __name__ == "__main__":

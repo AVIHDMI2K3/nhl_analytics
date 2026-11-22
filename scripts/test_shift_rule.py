@@ -121,15 +121,8 @@ def rule_spanning_out_longest(rows):
         unique = list(dict.fromkeys((r[3], r[4]) for r in period_rows))
         survivors = []
         for i, (start, end) in enumerate(unique):
-            touching = [
-                other for j, other in enumerate(unique)
-                if j != i and overlaps(start, end, other[0], other[1])
-            ]
-            spans = any(
-                not overlaps(a[0], a[1], b[0], b[1])
-                for x, a in enumerate(touching)
-                for b in touching[x + 1:]
-            )
+            touching = [other for j, other in enumerate(unique) if j != i and overlaps(start, end, other[0], other[1])]
+            spans = any(not overlaps(a[0], a[1], b[0], b[1]) for x, a in enumerate(touching) for b in touching[x + 1 :])
             if not spans:
                 survivors.append((start, end))
         kept.extend(drop_overlaps(sorted(survivors, key=lambda r: r[0] - r[1])))
@@ -194,7 +187,7 @@ def main():
         f"""
         select game_id, player_id, period, shift_number, shift_id,
                start_game_seconds, end_game_seconds
-        from '{(staging / 'shifts.parquet').as_posix()}'
+        from '{(staging / "shifts.parquet").as_posix()}'
         where start_game_seconds is not null and end_game_seconds is not null
         """
     ).fetchall()
@@ -203,9 +196,7 @@ def main():
     for game_id, player_id, period, number, shift_id, start, end in rows:
         if (game_id, player_id) in goalies:
             continue
-        games[(game_id, player_id)].append(
-            (period, number, BIG if shift_id is None else shift_id, start, end)
-        )
+        games[(game_id, player_id)].append((period, number, BIG if shift_id is None else shift_id, start, end))
     # rows without a shift number sort last in the number-based rules
     for key, items in games.items():
         games[key] = [(p, BIG if n is None else n, i, s, e) for p, n, i, s, e in items]
@@ -219,8 +210,10 @@ def main():
         "spanning out, longest": rule_spanning_out_longest,
     }
     print(f"Season {args.season}: {len(reference)} skaters in the NHL's totals\n")
-    print(f"{'rule':24s} {'exact':>6} {'within 2 s':>11} {'3-60 s':>7} {'over 60 s':>10} "
-          f"{'we higher':>10} {'we lower':>9} {'same shifts':>12}")
+    print(
+        f"{'rule':24s} {'exact':>6} {'within 2 s':>11} {'3-60 s':>7} {'over 60 s':>10} "
+        f"{'we higher':>10} {'we lower':>9} {'same shifts':>12}"
+    )
     results = {}
     for name, rule in rules.items():
         buckets, higher, lower, same_shifts, worst = compare(totals_per_player(games, rule), reference)

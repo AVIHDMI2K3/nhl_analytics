@@ -39,14 +39,31 @@ INTERMEDIATE_ROOT = REPO_ROOT / "data" / "intermediate"
 LOG_DIR = REPO_ROOT / "data" / "logs"
 SHOT_TYPES = ("goal", "shot-on-goal")
 EVENT_COLUMNS = [
-    "game_id", "event_id", "event_type", "period", "period_type", "game_seconds", "seconds_remaining_in_period",
-    "event_owner_team_id", "shooting_player_id", "scoring_player_id", "goalie_in_net_id", "shot_type",
-    "x_coord", "y_coord",
+    "game_id",
+    "event_id",
+    "event_type",
+    "period",
+    "period_type",
+    "game_seconds",
+    "seconds_remaining_in_period",
+    "event_owner_team_id",
+    "shooting_player_id",
+    "scoring_player_id",
+    "goalie_in_net_id",
+    "shot_type",
+    "x_coord",
+    "y_coord",
 ]
 BOX_COLUMNS = ["game_id", "team_id", "player_group", "player_id", "sog", "shots_against"]
 FEATURES = (
-    "duplicate_within_2s", "within_1s_after_goal", "no_shot_type", "no_coordinates",
-    "overtime", "last_10s_of_period", "shooter_is_goalie", "goalie_on_shooters_team",
+    "duplicate_within_2s",
+    "within_1s_after_goal",
+    "no_shot_type",
+    "no_coordinates",
+    "overtime",
+    "last_10s_of_period",
+    "shooter_is_goalie",
+    "goalie_on_shooters_team",
 )
 SHIFT_WINDOW = 300
 
@@ -69,15 +86,19 @@ def annotate(events, goalie_team):
         time = event["game_seconds"]
         flags = {
             "duplicate_within_2s": any(
-                other is not event and other["event_owner_team_id"] == event["event_owner_team_id"]
-                and shooter_of(other) == shooter and abs(other["game_seconds"] - time) <= 2
+                other is not event
+                and other["event_owner_team_id"] == event["event_owner_team_id"]
+                and shooter_of(other) == shooter
+                and abs(other["game_seconds"] - time) <= 2
                 for other in shots
             ),
             "within_1s_after_goal": any(g is not event and 0 <= time - g["game_seconds"] <= 1 for g in goals),
             "no_shot_type": event["shot_type"] is None,
             "no_coordinates": event["x_coord"] is None or event["y_coord"] is None,
             "overtime": event["period_type"] == "OT",
-            "last_10s_of_period": (event["seconds_remaining_in_period"] is not None and event["seconds_remaining_in_period"] <= 10),
+            "last_10s_of_period": (
+                event["seconds_remaining_in_period"] is not None and event["seconds_remaining_in_period"] <= 10
+            ),
             "shooter_is_goalie": shooter in goalie_team,
             "goalie_on_shooters_team": (
                 event["goalie_in_net_id"] is not None
@@ -104,15 +125,32 @@ def goalie_shift_status(game, events, stints):
             status, on_ice = "outside our stints", []
         else:
             on_ice = stint[f"{defending}_goalie_ids"]
-            status = "named goalie on the ice" if goalie in on_ice else ("no goalie on the ice" if not on_ice else "a different goalie on the ice")
-        results.append({"game_id": game["game_id"], "event_id": event["event_id"], "game_seconds": event["game_seconds"],
-                        "goalie_id": goalie, "team_id": game[f"{defending}_team_id"], "status": status, "on_ice": list(on_ice)})
+            status = (
+                "named goalie on the ice"
+                if goalie in on_ice
+                else ("no goalie on the ice" if not on_ice else "a different goalie on the ice")
+            )
+        results.append(
+            {
+                "game_id": game["game_id"],
+                "event_id": event["event_id"],
+                "game_seconds": event["game_seconds"],
+                "goalie_id": goalie,
+                "team_id": game[f"{defending}_team_id"],
+                "status": status,
+                "on_ice": list(on_ice),
+            }
+        )
     return results
 
 
 def compare_counts(counts, box):
     """[(key, box, events)] for every key in either dict where they differ."""
-    return [(key, box.get(key, 0), counts.get(key, 0)) for key in sorted(set(counts) | set(box)) if counts.get(key, 0) != box.get(key, 0)]
+    return [
+        (key, box.get(key, 0), counts.get(key, 0))
+        for key in sorted(set(counts) | set(box))
+        if counts.get(key, 0) != box.get(key, 0)
+    ]
 
 
 def percent(part, whole):
@@ -152,7 +190,8 @@ def process_game(game, events, stints, box):
     reconcile["by_goalies"] = sum(1 for item in annotated if item["shooter"] in goalie_team)
     reconcile["no_shooter"] = sum(1 for item in annotated if item["shooter"] is None)
     reconcile["not_in_boxscore"] = sum(
-        1 for item in annotated
+        1
+        for item in annotated
         if item["shooter"] is not None and item["shooter"] not in skater_box and item["shooter"] not in goalie_team
     )
     reconcile["box_skater_shots"] = sum(skater_box.values())
@@ -168,15 +207,21 @@ def process_game(game, events, stints, box):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify goalie shifts; find why the boxscore differs from the play-by-play.")
+    parser = argparse.ArgumentParser(
+        description="Verify goalie shifts; find why the boxscore differs from the play-by-play."
+    )
     parser.add_argument("--season", type=int, required=True)
     args = parser.parse_args()
     staging = STAGING_ROOT / f"season={args.season}"
     metrics = METRICS_ROOT / f"season={args.season}"
 
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
-    ).to_pylist() if g["game_type"] == 2 and g["has_boxscore"]}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
+        ).to_pylist()
+        if g["game_type"] == 2 and g["has_boxscore"]
+    }
     events_by_game, stints_by_game, box_by_game = defaultdict(list), defaultdict(list), defaultdict(list)
     for row in pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist():
         events_by_game[row["game_id"]].append(row)
@@ -206,52 +251,119 @@ def main():
     bad = [r for r in shift_results if r["status"] != "named goalie on the ice"]
     if bad:
         shifts_raw = pq.read_table(
-            staging / "shifts.parquet", columns=["game_id", "player_id", "team_id", "period", "shift_number", "start_game_seconds", "end_game_seconds"],
+            staging / "shifts.parquet",
+            columns=[
+                "game_id",
+                "player_id",
+                "team_id",
+                "period",
+                "shift_number",
+                "start_game_seconds",
+                "end_game_seconds",
+            ],
             filters=[("game_id", "in", sorted({r["game_id"] for r in bad}))],
         ).to_pylist()
         clean_path = INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet"
-        kept = {(r["game_id"], r["player_id"], r["start_game_seconds"], r["end_game_seconds"]) for r in pq.read_table(
-            clean_path, columns=["game_id", "player_id", "start_game_seconds", "end_game_seconds"],
-            filters=[("game_id", "in", sorted({r["game_id"] for r in bad}))],
-        ).to_pylist()}
-        print(f"\n  The {len(bad)} cases, with the named goalie's shifts in the game within {SHIFT_WINDOW} s of the shot")
+        kept = {
+            (r["game_id"], r["player_id"], r["start_game_seconds"], r["end_game_seconds"])
+            for r in pq.read_table(
+                clean_path,
+                columns=["game_id", "player_id", "start_game_seconds", "end_game_seconds"],
+                filters=[("game_id", "in", sorted({r["game_id"] for r in bad}))],
+            ).to_pylist()
+        }
+        print(
+            f"\n  The {len(bad)} cases, with the named goalie's shifts in the game within {SHIFT_WINDOW} s of the shot"
+        )
         print("  (shift: start-end in game seconds; '*' = in the NHL's raw chart but dropped by our cleaning)")
         for r in sorted(bad, key=lambda r: (r["game_id"], r["game_seconds"]))[:20]:
             near = sorted(
-                (s for s in shifts_raw if s["game_id"] == r["game_id"] and s["player_id"] == r["goalie_id"]
-                 and s["start_game_seconds"] - SHIFT_WINDOW <= r["game_seconds"] <= s["end_game_seconds"] + SHIFT_WINDOW),
+                (
+                    s
+                    for s in shifts_raw
+                    if s["game_id"] == r["game_id"]
+                    and s["player_id"] == r["goalie_id"]
+                    and s["start_game_seconds"] - SHIFT_WINDOW
+                    <= r["game_seconds"]
+                    <= s["end_game_seconds"] + SHIFT_WINDOW
+                ),
                 key=lambda s: s["start_game_seconds"],
             )
-            text = ", ".join(
-                f"{s['start_game_seconds']}-{s['end_game_seconds']}"
-                + ("" if (s["game_id"], s["player_id"], s["start_game_seconds"], s["end_game_seconds"]) in kept else "*") for s in near
-            ) or "none in the raw chart"
-            print(f"    game {r['game_id']} at {r['game_seconds']} s, goalie {r['goalie_id']}: {r['status']} (on ice: {r['on_ice']}); his shifts: {text}")
+            text = (
+                ", ".join(
+                    f"{s['start_game_seconds']}-{s['end_game_seconds']}"
+                    + (
+                        ""
+                        if (s["game_id"], s["player_id"], s["start_game_seconds"], s["end_game_seconds"]) in kept
+                        else "*"
+                    )
+                    for s in near
+                )
+                or "none in the raw chart"
+            )
+            print(
+                f"    game {r['game_id']} at {r['game_seconds']} s, goalie {r['goalie_id']}: {r['status']} (on ice: {r['on_ice']}); his shifts: {text}"
+            )
 
     print("\nB. Skaters' shots: boxscore shots on goal vs shot and goal events by the skater")
-    print(f"  events {reconcile['events']} = by goalies {reconcile['by_goalies']} + with no shooter {reconcile['no_shooter']} "
-          f"+ by someone not in the boxscore {reconcile['not_in_boxscore']} + by skaters {reconcile['events'] - reconcile['by_goalies'] - reconcile['no_shooter'] - reconcile['not_in_boxscore']}")
+    print(
+        f"  events {reconcile['events']} = by goalies {reconcile['by_goalies']} + with no shooter {reconcile['no_shooter']} "
+        f"+ by someone not in the boxscore {reconcile['not_in_boxscore']} + by skaters {reconcile['events'] - reconcile['by_goalies'] - reconcile['no_shooter'] - reconcile['not_in_boxscore']}"
+    )
     print(f"  boxscore skaters' shots on goal: {reconcile['box_skater_shots']}")
-    print(f"  skater-games that differ: {len(skater_diffs)}; difference (events - boxscore) over them: "
-          + ", ".join(f"{d:+d} x {n}" for d, n in sorted(Counter(e - b for _, _, b, e, _ in skater_diffs).items())))
-    print_features("skaters", [flags_of(items) for *_, items in skater_diffs], [flags_of(items) for items in skater_agree])
+    print(
+        f"  skater-games that differ: {len(skater_diffs)}; difference (events - boxscore) over them: "
+        + ", ".join(f"{d:+d} x {n}" for d, n in sorted(Counter(e - b for _, _, b, e, _ in skater_diffs).items()))
+    )
+    print_features(
+        "skaters", [flags_of(items) for *_, items in skater_diffs], [flags_of(items) for items in skater_agree]
+    )
 
     print("\nC. Goalies' shots against: boxscore vs events that name the goalie")
-    print(f"  goalie-games that differ: {len(goalie_diffs)}; difference (events - boxscore): "
-          + ", ".join(f"{d:+d} x {n}" for d, n in sorted(Counter(e - b for _, _, b, e, _ in goalie_diffs).items())))
-    print_features("goalies", [flags_of(items) for *_, items in goalie_diffs], [flags_of(items) for items in goalie_agree])
+    print(
+        f"  goalie-games that differ: {len(goalie_diffs)}; difference (events - boxscore): "
+        + ", ".join(f"{d:+d} x {n}" for d, n in sorted(Counter(e - b for _, _, b, e, _ in goalie_diffs).items()))
+    )
+    print_features(
+        "goalies", [flags_of(items) for *_, items in goalie_diffs], [flags_of(items) for items in goalie_agree]
+    )
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     out = LOG_DIR / f"boxscore_vs_pbp_{args.season}.csv"
     with open(out, "w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["table", "game_id", "player_id", "boxscore", "events", "event_id", "game_seconds", "event_type", "period_type", *FEATURES])
+        writer.writerow(
+            [
+                "table",
+                "game_id",
+                "player_id",
+                "boxscore",
+                "events",
+                "event_id",
+                "game_seconds",
+                "event_type",
+                "period_type",
+                *FEATURES,
+            ]
+        )
         for table, rows in (("skater", skater_diffs), ("goalie", goalie_diffs)):
             for game_id, player, box_value, event_value, items in rows:
                 for item in items:
                     event = item["event"]
-                    writer.writerow([table, game_id, player, box_value, event_value, event["event_id"], event["game_seconds"],
-                                     event["event_type"], event["period_type"], *(int(item[f]) for f in FEATURES)])
+                    writer.writerow(
+                        [
+                            table,
+                            game_id,
+                            player,
+                            box_value,
+                            event_value,
+                            event["event_id"],
+                            event["game_seconds"],
+                            event["event_type"],
+                            event["period_type"],
+                            *(int(item[f]) for f in FEATURES),
+                        ]
+                    )
     print(f"\nEvents of every differing player-game written to {out}")
     print("\nExamples (first 5 differing goalie-games and skater-games):")
     for label, rows in (("goalie", goalie_diffs), ("skater", skater_diffs)):
@@ -259,7 +371,10 @@ def main():
             print(f"  {label} {player} game {game_id}: boxscore {box_value}, events {event_value}")
             for item in sorted(items, key=lambda i: i["event"]["game_seconds"]):
                 on = [f for f in FEATURES if item[f]]
-                print(f"    {item['event']['game_seconds']:5d} s {item['event']['event_type']:12s} {item['event']['period_type']:4s} " + (", ".join(on) or "-"))
+                print(
+                    f"    {item['event']['game_seconds']:5d} s {item['event']['event_type']:12s} {item['event']['period_type']:4s} "
+                    + (", ".join(on) or "-")
+                )
 
 
 def flags_of(items):

@@ -61,8 +61,12 @@ def compare(ours, five, ev, three):
             continue
         mine = {part: parts.get(part, 0.0) for part in PARTS}
         table[team] = {
-            "ours": mine, "ours_ev": sum(mine.values()), "ours_4v4_rest": mine["4v4"] + mine["goalie out"] + mine["other"],
-            "nst_5v5": five[team], "nst_3v3": three[team], "nst_ev": ev[team],
+            "ours": mine,
+            "ours_ev": sum(mine.values()),
+            "ours_4v4_rest": mine["4v4"] + mine["goalie out"] + mine["other"],
+            "nst_5v5": five[team],
+            "nst_3v3": three[team],
+            "nst_ev": ev[team],
             "nst_4v4_rest": ev[team] - five[team] - three[team],
         }
     return table
@@ -74,13 +78,14 @@ def main():
     parser.add_argument("--folder", type=Path, required=True)
     args = parser.parse_args()
     import pyarrow.parquet as pq
-
     from build_season_display import team_abbrevs
 
     metrics = REPO_ROOT / "data" / "metrics" / f"season={args.season}"
     abbrevs = team_abbrevs(REPO_ROOT / "data" / "staging" / f"season={args.season}")
-    ours = {abbrevs[team_id]: parts for team_id, parts in minutes_by_team(
-        pq.read_table(metrics / "team_game_strength.parquet").to_pylist()).items()}
+    ours = {
+        abbrevs[team_id]: parts
+        for team_id, parts in minutes_by_team(pq.read_table(metrics / "team_game_strength.parquet").to_pylist()).items()
+    }
     names = [f"nst_teams_{situation}_{args.season}.csv" for situation in ("5v5", "ev", "3v3")]
     missing = [name for name in names if not (args.folder / name).exists()]
     if missing:
@@ -94,13 +99,17 @@ def main():
     print(f"Season {args.season}: even-strength time in minutes, {len(table)} teams, league totals")
     print(f"  5v5          ours {total(lambda r: r['ours']['5v5']):10.1f}   NST {total(lambda r: r['nst_5v5']):10.1f}")
     print(f"  3v3          ours {total(lambda r: r['ours']['3v3']):10.1f}   NST {total(lambda r: r['nst_3v3']):10.1f}")
-    print(f"  4v4 + rest   ours {total(lambda r: r['ours_4v4_rest']):10.1f}   NST {total(lambda r: r['nst_4v4_rest']):10.1f}  (EV - 5v5 - 3v3)")
+    print(
+        f"  4v4 + rest   ours {total(lambda r: r['ours_4v4_rest']):10.1f}   NST {total(lambda r: r['nst_4v4_rest']):10.1f}  (EV - 5v5 - 3v3)"
+    )
     print(f"  EV total     ours {total(lambda r: r['ours_ev']):10.1f}   NST {total(lambda r: r['nst_ev']):10.1f}")
     print("  ours, split: " + ", ".join(f"{part} {total(lambda r, p=part: r['ours'][p]):.1f}" for part in PARTS))
     print("\nPer team, difference ours - NST in minutes (5v5, 3v3, 4v4 + rest, EV), largest 5v5 gaps first:")
     for team, row in sorted(table.items(), key=lambda item: -abs(item[1]["ours"]["5v5"] - item[1]["nst_5v5"]))[:10]:
-        print(f"  {team}  {row['ours']['5v5'] - row['nst_5v5']:+7.1f} {row['ours']['3v3'] - row['nst_3v3']:+7.1f} "
-              f"{row['ours_4v4_rest'] - row['nst_4v4_rest']:+7.1f} {row['ours_ev'] - row['nst_ev']:+7.1f}")
+        print(
+            f"  {team}  {row['ours']['5v5'] - row['nst_5v5']:+7.1f} {row['ours']['3v3'] - row['nst_3v3']:+7.1f} "
+            f"{row['ours_4v4_rest'] - row['nst_4v4_rest']:+7.1f} {row['ours_ev'] - row['nst_ev']:+7.1f}"
+        )
 
 
 if __name__ == "__main__":

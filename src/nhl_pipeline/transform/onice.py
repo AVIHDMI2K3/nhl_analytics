@@ -27,9 +27,7 @@ situationCode digit order (confirmed against the shift chart):
 
 # Events where play stops: a shift that ends at the event's second still counts,
 # and a shift that starts at that second does not.
-END_INCLUSIVE_EVENT_TYPES = frozenset(
-    {"goal", "penalty", "delayed-penalty", "period-end", "game-end"}
-)
+END_INCLUSIVE_EVENT_TYPES = frozenset({"goal", "penalty", "delayed-penalty", "period-end", "game-end"})
 
 NO_NUMBER = 10**9  # sorts shift rows without a shift number or id last
 
@@ -84,7 +82,9 @@ def is_period_long(row):
     3600-3900 in overtime) next to shorter rows for the same goalie.
     """
     period_start = REGULATION_PERIOD_SECONDS * (row["period"] - 1)
-    return row["start_game_seconds"] == period_start and row["end_game_seconds"] - period_start >= MIN_PERIOD_LONG_SECONDS
+    return (
+        row["start_game_seconds"] == period_start and row["end_game_seconds"] - period_start >= MIN_PERIOD_LONG_SECONDS
+    )
 
 
 def uncovered_parts(start, end, intervals):
@@ -118,7 +118,8 @@ def fill_goalie_gaps(shifts, dropped_rows):
     added = []
     for row in dropped_rows:
         covered = [
-            (s["start"], s["end"]) for s in shifts + added
+            (s["start"], s["end"])
+            for s in shifts + added
             if s["is_goalie"] and s["team_id"] == row["team_id"] and s["period"] == row["period"]
         ]
         for start, end in uncovered_parts(row["start_game_seconds"], row["end_game_seconds"], covered):

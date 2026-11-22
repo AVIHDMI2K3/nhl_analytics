@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from line_tables import positions_by_game
 from zone_starts import season_zone_rows, unit_zone_starts
 
@@ -26,10 +25,18 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 EVENT_COLUMNS = ["game_id", "event_type", "event_owner_team_id", "zone_code", "situation_code", "game_seconds"]
-SCHEMA = pa.schema([
-    ("season", pa.int64()), ("team_id", pa.int64()), ("unit_type", pa.string()), ("player_ids", pa.list_(pa.int64())),
-    ("oz", pa.int64()), ("dz", pa.int64()), ("nz", pa.int64()), ("oz_start_pct", pa.float64()),
-])
+SCHEMA = pa.schema(
+    [
+        ("season", pa.int64()),
+        ("team_id", pa.int64()),
+        ("unit_type", pa.string()),
+        ("player_ids", pa.list_(pa.int64())),
+        ("oz", pa.int64()),
+        ("dz", pa.int64()),
+        ("nz", pa.int64()),
+        ("oz_start_pct", pa.float64()),
+    ]
+)
 
 
 def group_by_game(rows):
@@ -48,19 +55,29 @@ def main():
 
     staging = args.staging_root / f"season={args.season}"
     metrics = args.metrics_root / f"season={args.season}"
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
-    positions = positions_by_game(pq.read_table(
-        staging / "boxscore_players.parquet", columns=["game_id", "player_id", "position", "player_group"]).to_pylist())
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]
+        ).to_pylist()
+    }
+    positions = positions_by_game(
+        pq.read_table(
+            staging / "boxscore_players.parquet", columns=["game_id", "player_id", "position", "player_group"]
+        ).to_pylist()
+    )
     stints = group_by_game(pq.read_table(metrics / "stints.parquet").to_pylist())
     events = group_by_game(
-        e for e in pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
-        if e["event_type"] == "faceoff")
+        e
+        for e in pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
+        if e["event_type"] == "faceoff"
+    )
 
     results, sides = [], 0
     for game_id in sorted(stints):
-        totals, counted = unit_zone_starts(games[game_id], stints[game_id], events.get(game_id, []),
-                                           positions.get(game_id, {}))
+        totals, counted = unit_zone_starts(
+            games[game_id], stints[game_id], events.get(game_id, []), positions.get(game_id, {})
+        )
         results.append(totals)
         sides += counted
     rows = season_zone_rows(results)
@@ -76,8 +93,10 @@ def main():
         subset = [r for r in rows if r["unit_type"] == unit_type]
         found = sum(r["oz"] + r["dz"] + r["nz"] for r in subset)
         oz, dz = sum(r["oz"] for r in subset), sum(r["dz"] for r in subset)
-        print(f"  {unit_type}: a unit was found for {found} faceoff sides ({100 * found / (sides * 1 or 1):.1f}%); "
-              f"league oz {oz}, dz {dz}")
+        print(
+            f"  {unit_type}: a unit was found for {found} faceoff sides ({100 * found / (sides * 1 or 1):.1f}%); "
+            f"league oz {oz}, dz {dz}"
+        )
 
 
 if __name__ == "__main__":

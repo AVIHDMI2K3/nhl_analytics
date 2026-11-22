@@ -42,8 +42,11 @@ def parse_report(html):
     """{'team': name, 'players': [{'number', 'name', 'shifts': [{'shift_number', 'period', 'start', 'end'}]}]}."""
     team = TEAM.search(html)
     players = []
-    events = sorted([(m.start(), "player", m) for m in HEADING.finditer(html)]
-                    + [(m.start(), "row", m) for m in ROW.finditer(html)], key=lambda item: item[0])
+    events = sorted(
+        [(m.start(), "player", m) for m in HEADING.finditer(html)]
+        + [(m.start(), "row", m) for m in ROW.finditer(html)],
+        key=lambda item: item[0],
+    )
     for _, kind, match in events:
         if kind == "player":
             found = PLAYER.match(clean(match.group(1)))
@@ -62,11 +65,14 @@ def parse_report(html):
         if period is None or not start or not end:
             continue
         base = period_start(period)
-        players[-1]["shifts"].append({
-            "shift_number": int(cells[0]), "period": period,
-            "start": base + int(start.group(1)) * 60 + int(start.group(2)),
-            "end": base + int(end.group(1)) * 60 + int(end.group(2)),
-        })
+        players[-1]["shifts"].append(
+            {
+                "shift_number": int(cells[0]),
+                "period": period,
+                "start": base + int(start.group(1)) * 60 + int(start.group(2)),
+                "end": base + int(end.group(1)) * 60 + int(end.group(2)),
+            }
+        )
     return {"team": clean(team.group(1)) if team else None, "players": [p for p in players if p]}
 
 
@@ -83,12 +89,19 @@ def shift_rows(game_id, team_id, parsed, id_by_number):
             unmatched.append((player["number"], player["name"]))
             continue
         for shift in player["shifts"]:
-            rows.append({
-                "game_id": game_id, "player_id": player_id, "player_name": player["name"], "team_id": team_id,
-                "period": shift["period"],
-                "shift_number": shift["shift_number"], "shift_id": None,
-                "start_game_seconds": shift["start"], "end_game_seconds": shift["end"],
-            })
+            rows.append(
+                {
+                    "game_id": game_id,
+                    "player_id": player_id,
+                    "player_name": player["name"],
+                    "team_id": team_id,
+                    "period": shift["period"],
+                    "shift_number": shift["shift_number"],
+                    "shift_id": None,
+                    "start_game_seconds": shift["start"],
+                    "end_game_seconds": shift["end"],
+                }
+            )
     return rows, unmatched
 
 
@@ -98,7 +111,9 @@ def toi_differences(rows, toi_by_player, tolerance=2):
     not. This is an independent check of a report: the boxscore time on ice does not come from the same shifts."""
     from_shifts = {}
     for row in rows:
-        from_shifts[row["player_id"]] = from_shifts.get(row["player_id"], 0) + row["end_game_seconds"] - row["start_game_seconds"]
+        from_shifts[row["player_id"]] = (
+            from_shifts.get(row["player_id"], 0) + row["end_game_seconds"] - row["start_game_seconds"]
+        )
     differing = []
     for player_id in sorted(set(from_shifts) | set(toi_by_player)):
         mine, official = from_shifts.get(player_id, 0), toi_by_player.get(player_id) or 0
@@ -114,11 +129,19 @@ def to_staging_row(row, team_abbrev, season):
     split and written in title case."""
     last, _, first = (row.get("player_name") or "").partition(",")
     return {
-        "game_id": row["game_id"], "shift_id": None, "player_id": row["player_id"],
-        "first_name": first.strip().title() or None, "last_name": last.strip().title() or None,
-        "team_id": row["team_id"], "team": team_abbrev, "period": row["period"], "shift_number": row["shift_number"],
+        "game_id": row["game_id"],
+        "shift_id": None,
+        "player_id": row["player_id"],
+        "first_name": first.strip().title() or None,
+        "last_name": last.strip().title() or None,
+        "team_id": row["team_id"],
+        "team": team_abbrev,
+        "period": row["period"],
+        "shift_number": row["shift_number"],
         "start_seconds_in_period": row["start_game_seconds"] - period_start(row["period"]),
         "end_seconds_in_period": row["end_game_seconds"] - period_start(row["period"]),
-        "start_game_seconds": row["start_game_seconds"], "end_game_seconds": row["end_game_seconds"],
-        "duration_seconds": row["end_game_seconds"] - row["start_game_seconds"], "season": season,
+        "start_game_seconds": row["start_game_seconds"],
+        "end_game_seconds": row["end_game_seconds"],
+        "duration_seconds": row["end_game_seconds"] - row["start_game_seconds"],
+        "season": season,
     }

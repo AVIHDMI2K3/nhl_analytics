@@ -48,16 +48,41 @@ METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 STRENGTHS = ("ev", "pp", "sh")
 REFERENCE_FIELDS = {"ev": "evTimeOnIce", "pp": "ppTimeOnIce", "sh": "shTimeOnIce"}
 SHIFT_COLUMNS = [
-    "game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds", "is_goalie",
+    "game_id",
+    "player_id",
+    "team_id",
+    "period",
+    "start_game_seconds",
+    "end_game_seconds",
+    "is_goalie",
 ]
 ATTEMPT_COLUMNS = [
-    "game_id", "game_seconds", "attempt_type", "shooter_id", "blocker_id", "blocker_is_teammate",
-    "is_home", "has_on_ice", "skater_ids_for", "skater_ids_against",
+    "game_id",
+    "game_seconds",
+    "attempt_type",
+    "shooter_id",
+    "blocker_id",
+    "blocker_is_teammate",
+    "is_home",
+    "has_on_ice",
+    "skater_ids_for",
+    "skater_ids_against",
 ]
 EVENT_COLUMNS = [
-    "game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
-    "assist1_player_id", "assist2_player_id", "hitting_player_id", "hittee_player_id", "player_id",
-    "winning_player_id", "losing_player_id", "committed_by_player_id", "drawn_by_player_id",
+    "game_id",
+    "event_type",
+    "period_type",
+    "game_seconds",
+    "event_owner_team_id",
+    "assist1_player_id",
+    "assist2_player_id",
+    "hitting_player_id",
+    "hittee_player_id",
+    "player_id",
+    "winning_player_id",
+    "losing_player_id",
+    "committed_by_player_id",
+    "drawn_by_player_id",
     "penalty_minutes",
 ]
 
@@ -73,12 +98,17 @@ def compare(title, ours, official):
     """Print how many per-player-game values match the boxscore exactly."""
     exact = sum(1 for key, value in official.items() if ours.get(key, 0) == value)
     worst = sorted(
-        ((abs(ours.get(key, 0) - value), key, ours.get(key, 0) - value)
-         for key, value in official.items() if ours.get(key, 0) != value),
+        (
+            (abs(ours.get(key, 0) - value), key, ours.get(key, 0) - value)
+            for key, value in official.items()
+            if ours.get(key, 0) != value
+        ),
         reverse=True,
     )
-    print(f"   {title}: {exact} of {len(official)} exact ({100 * exact / len(official):.2f}%); "
-          f"ours {sum(ours.get(k, 0) for k in official)}, boxscore {sum(official.values())}")
+    print(
+        f"   {title}: {exact} of {len(official)} exact ({100 * exact / len(official):.2f}%); "
+        f"ours {sum(ours.get(k, 0) for k in official)}, boxscore {sum(official.values())}"
+    )
     for _, (game_id, player_id), difference in worst[:3]:
         print(f"      {game_id} {player_id} ours minus boxscore {difference:+d}")
 
@@ -105,12 +135,24 @@ def main():
     )
     box = pq.read_table(
         staging / "boxscore_players.parquet",
-        columns=["game_id", "player_id", "player_group", "plus_minus", "goals", "sog", "power_play_goals",
-                 "assists", "hits", "giveaways", "takeaways", "blocked_shots", "pim", "faceoff_winning_pctg"],
+        columns=[
+            "game_id",
+            "player_id",
+            "player_group",
+            "plus_minus",
+            "goals",
+            "sog",
+            "power_play_goals",
+            "assists",
+            "hits",
+            "giveaways",
+            "takeaways",
+            "blocked_shots",
+            "pim",
+            "faceoff_winning_pctg",
+        ],
     ).to_pylist()
-    events = group_by_game(
-        pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
-    )
+    events = group_by_game(pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist())
 
     player_rows, team_rows = [], []
     notes = Counter()
@@ -138,10 +180,9 @@ def main():
             shooting = "home" if attempt["is_home"] else "away"
             other = "away" if shooting == "home" else "home"
             agree["compared"] += 1
-            agree["same"] += (
-                sorted(stint[f"{shooting}_skater_ids"]) == sorted(attempt["skater_ids_for"])
-                and sorted(stint[f"{other}_skater_ids"]) == sorted(attempt["skater_ids_against"])
-            )
+            agree["same"] += sorted(stint[f"{shooting}_skater_ids"]) == sorted(attempt["skater_ids_for"]) and sorted(
+                stint[f"{other}_skater_ids"]
+            ) == sorted(attempt["skater_ids_against"])
 
     missing = len(games) - len(shifts)
     print(f"Season {args.season}: {len(shifts)} games with stints, {missing} without shift data")
@@ -150,9 +191,11 @@ def main():
     base_seconds = Counter()
     for row in player_rows:
         base_seconds[row["strength"]] += row["seconds"]
-    print("\n1. Player seconds in the rows equal the stints' player-seconds: "
-          f"{all(base_seconds[s] == stint_player_seconds[s] for s in STRENGTHS)}  "
-          + ", ".join(f"{s} {base_seconds[s]}" for s in STRENGTHS))
+    print(
+        "\n1. Player seconds in the rows equal the stints' player-seconds: "
+        f"{all(base_seconds[s] == stint_player_seconds[s] for s in STRENGTHS)}  "
+        + ", ".join(f"{s} {base_seconds[s]}" for s in STRENGTHS)
+    )
 
     if missing:
         print("\n2. Skipped: the NHL's season totals include games we have no shifts for.")
@@ -169,8 +212,10 @@ def main():
             ours = sum(per_player.get((p, strength), 0) for p in reference)
             nhl = sum(r[field] for r in reference.values())
             over = sum(1 for p, r in reference.items() if abs(per_player.get((p, strength), 0) - r[field]) > 60)
-            print(f"   {strength}: ours {ours}, NHL {nhl}, {100 * (ours - nhl) / nhl:+.2f}%; "
-                  f"{over} skaters off by more than 60 s")
+            print(
+                f"   {strength}: ours {ours}, NHL {nhl}, {100 * (ours - nhl) / nhl:+.2f}%; "
+                f"{over} skaters off by more than 60 s"
+            )
 
     ours_pm, ours_goals, ours_sog, ours_ppg = Counter(), Counter(), Counter(), Counter()
     for row in player_rows:
@@ -183,8 +228,10 @@ def main():
     skaters = [b for b in box if b["player_group"] != "goalies" and b["game_id"] in shifts]
     print("\n3-4. Per player per game against the boxscore")
     for title, ours, column in (
-        ("plus/minus", ours_pm, "plus_minus"), ("goals", ours_goals, "goals"),
-        ("shots on goal", ours_sog, "sog"), ("power-play goals", ours_ppg, "power_play_goals"),
+        ("plus/minus", ours_pm, "plus_minus"),
+        ("goals", ours_goals, "goals"),
+        ("shots on goal", ours_sog, "sog"),
+        ("power-play goals", ours_ppg, "power_play_goals"),
     ):
         compare(title, ours, {(b["game_id"], b["player_id"]): b[column] for b in skaters if b[column] is not None})
 
@@ -195,22 +242,27 @@ def main():
             counted[kind] += row[f"for_{kind}"]
             against[kind] += row[f"against_{kind}"]
     inside = Counter(
-        base_tables.KIND_BY_ATTEMPT[a["attempt_type"]]
-        for game_id in shifts for a in attempts.get(game_id, [])
+        base_tables.KIND_BY_ATTEMPT[a["attempt_type"]] for game_id in shifts for a in attempts.get(game_id, [])
     )
     print("\n5. Attempts in the team rows, for / against / all attempts in games with stints")
     for kind in base_tables.KINDS:
         print(f"   {kind}: {counted[kind]} / {against[kind]} / {inside[kind]}")
-    print(f"   attempts outside every stint (not counted): {notes['attempts_outside_stints']}; "
-          f"shooter not on the ice in his stint (credited anyway): {notes['shooter_not_on_ice']}; "
-          f"goalie as shooter (no skater row): {notes['goalie_shooter']}")
+    print(
+        f"   attempts outside every stint (not counted): {notes['attempts_outside_stints']}; "
+        f"shooter not on the ice in his stint (credited anyway): {notes['shooter_not_on_ice']}; "
+        f"goalie as shooter (no skater row): {notes['goalie_shooter']}"
+    )
 
-    print(f"\n6. Skaters on the ice at each attempt, stint vs Phase 3: {agree['same']} of {agree['compared']} "
-          f"the same ({100 * agree['same'] / agree['compared']:.2f}%)")
+    print(
+        f"\n6. Skaters on the ice at each attempt, stint vs Phase 3: {agree['same']} of {agree['compared']} "
+        f"the same ({100 * agree['same'] / agree['compared']:.2f}%)"
+    )
 
     per_player_game = Counter((r["game_id"], r["player_id"]) for r in player_rows)
-    print(f"\n7. Rows per player-game: mean {sum(per_player_game.values()) / len(per_player_game):.2f}, "
-          f"max {max(per_player_game.values())}")
+    print(
+        f"\n7. Rows per player-game: mean {sum(per_player_game.values()) / len(per_player_game):.2f}, "
+        f"max {max(per_player_game.values())}"
+    )
     state_seconds = Counter()
     for row in team_rows:
         state_seconds[tuple(row[c] for c in base_tables.STATE_COLUMNS)] += row["seconds"]
@@ -223,15 +275,31 @@ def main():
     totals = defaultdict(Counter)
     for row in player_rows:
         key = (row["game_id"], row["player_id"])
-        for column in ("assists_primary", "assists_secondary", "hits_made", "giveaways", "takeaways",
-                       "blocks_made", "penalty_minutes", "faceoff_wins", "faceoff_losses"):
+        for column in (
+            "assists_primary",
+            "assists_secondary",
+            "hits_made",
+            "giveaways",
+            "takeaways",
+            "blocks_made",
+            "penalty_minutes",
+            "faceoff_wins",
+            "faceoff_losses",
+        ):
             totals[column][key] += row[column]
-    ours_assists = Counter({k: totals["assists_primary"][k] + totals["assists_secondary"][k]
-                            for k in set(totals["assists_primary"]) | set(totals["assists_secondary"])})
+    ours_assists = Counter(
+        {
+            k: totals["assists_primary"][k] + totals["assists_secondary"][k]
+            for k in set(totals["assists_primary"]) | set(totals["assists_secondary"])
+        }
+    )
     for title, ours, column in (
-        ("assists", ours_assists, "assists"), ("hits", totals["hits_made"], "hits"),
-        ("giveaways", totals["giveaways"], "giveaways"), ("takeaways", totals["takeaways"], "takeaways"),
-        ("blocked shots", totals["blocks_made"], "blocked_shots"), ("penalty minutes", totals["penalty_minutes"], "pim"),
+        ("assists", ours_assists, "assists"),
+        ("hits", totals["hits_made"], "hits"),
+        ("giveaways", totals["giveaways"], "giveaways"),
+        ("takeaways", totals["takeaways"], "takeaways"),
+        ("blocked shots", totals["blocks_made"], "blocked_shots"),
+        ("penalty minutes", totals["penalty_minutes"], "pim"),
     ):
         compare(title, ours, {(b["game_id"], b["player_id"]): b[column] for b in skaters if b[column] is not None})
 
@@ -250,20 +318,34 @@ def main():
         near += 0.001 < gap <= 0.01
         far += gap > 0.01
         worst.append((gap, key))
-    print(f"   faceoff win % within 0.1 point: {close}, within 1 point: {near}, further off: {far}; "
-          f"boxscore has a percentage but we have no faceoffs: {no_faceoffs}")
+    print(
+        f"   faceoff win % within 0.1 point: {close}, within 1 point: {near}, further off: {far}; "
+        f"boxscore has a percentage but we have no faceoffs: {no_faceoffs}"
+    )
     for gap, (game_id, player_id) in sorted(worst, reverse=True)[:3]:
         print(f"      {game_id} {player_id} off by {gap:.3f}")
 
     print("   Event owner team vs the team the player is on (players who were on the ice):")
-    for column in ("assists_primary", "assists_secondary", "hits_made", "hits_taken", "giveaways",
-                   "takeaways", "faceoff_wins", "faceoff_losses", "penalties_taken", "penalties_drawn"):
+    for column in (
+        "assists_primary",
+        "assists_secondary",
+        "hits_made",
+        "hits_taken",
+        "giveaways",
+        "takeaways",
+        "faceoff_wins",
+        "faceoff_losses",
+        "penalties_taken",
+        "penalties_drawn",
+    ):
         same, differs = notes[f"{column}:team_matches_owner"], notes[f"{column}:team_differs_from_owner"]
         if same + differs:
             print(f"      {column}: {100 * same / (same + differs):.2f}% agree of {same + differs}")
-    print(f"   goalies named in events (no skater row): {notes['goalie_event']}; "
-          f"players not on the ice, placed by the owner team: {notes['actor_not_on_ice']}; "
-          f"unplaceable: {notes['actor_unplaceable']}; events outside every stint: {notes['events_outside_stints']}")
+    print(
+        f"   goalies named in events (no skater row): {notes['goalie_event']}; "
+        f"players not on the ice, placed by the owner team: {notes['actor_not_on_ice']}; "
+        f"unplaceable: {notes['actor_unplaceable']}; events outside every stint: {notes['events_outside_stints']}"
+    )
 
 
 if __name__ == "__main__":

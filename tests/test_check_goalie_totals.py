@@ -13,8 +13,13 @@ GAMES = {1, 2, 3, 4}
 
 def goalie(game, player, team=1, toi=3600, against=0, decision="W"):
     return {
-        "game_id": game, "player_id": player, "team_id": team, "player_group": "goalies",
-        "toi_seconds": toi, "goals_against": against, "decision": decision,
+        "game_id": game,
+        "player_id": player,
+        "team_id": team,
+        "player_group": "goalies",
+        "toi_seconds": toi,
+        "goals_against": against,
+        "decision": decision,
     }
 
 

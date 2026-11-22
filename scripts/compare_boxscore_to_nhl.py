@@ -42,13 +42,24 @@ USER_AGENT = "Mozilla/5.0 (nhl_analytics portfolio project; personal use)"
 POSITIONS = {"C", "L", "R", "D", "LW", "RW", "F"}
 # official header -> boxscore column
 HEADERS = {
-    "G": "goals", "A": "assists", "+/-": "plus_minus", "PIM": "pim", "S": "sog",
-    "HT": "hits", "HIT": "hits", "GV": "giveaways", "TK": "takeaways", "BS": "blocked_shots",
-    "BKS": "blocked_shots", "TOI": "toi_seconds",
+    "G": "goals",
+    "A": "assists",
+    "+/-": "plus_minus",
+    "PIM": "pim",
+    "S": "sog",
+    "HT": "hits",
+    "HIT": "hits",
+    "GV": "giveaways",
+    "TK": "takeaways",
+    "BS": "blocked_shots",
+    "BKS": "blocked_shots",
+    "TOI": "toi_seconds",
 }
-BOX_COLUMNS = ["game_id", "team_id", "home_or_away", "player_group", "sweater_number", "player_id"] + sorted(
-    set(HEADERS.values()) - {"toi_seconds"}
-) + ["toi_seconds"]
+BOX_COLUMNS = (
+    ["game_id", "team_id", "home_or_away", "player_group", "sweater_number", "player_id"]
+    + sorted(set(HEADERS.values()) - {"toi_seconds"})
+    + ["toi_seconds"]
+)
 
 
 class RowCollector(HTMLParser):
@@ -110,7 +121,7 @@ def full_header(header):
     names = ["#", "POS", "NAME"] + header[1:]
     if "TOI" in names:
         at = names.index("TOI")
-        names = names[:at] + ["TOI", "SHF", "AVG", "PP", "SH", "EV"] + names[at + 1:]
+        names = names[:at] + ["TOI", "SHF", "AVG", "PP", "SH", "EV"] + names[at + 1 :]
     return names
 
 
@@ -191,8 +202,15 @@ def compare_game(game_id, official, box_players):
                 same[column] += 1
             else:
                 differences.append(
-                    {"game_id": game_id, "side": side, "jersey": jersey, "player_id": ours["player_id"],
-                     "column": column, "official": official_value, "ours": ours[column]}
+                    {
+                        "game_id": game_id,
+                        "side": side,
+                        "jersey": jersey,
+                        "player_id": ours["player_id"],
+                        "column": column,
+                        "official": official_value,
+                        "ours": ours[column],
+                    }
                 )
     for key in box_players:
         if key not in official:
@@ -214,8 +232,11 @@ def main():
 
     box = pq.read_table(
         args.staging_root / f"season={args.season}" / "boxscore_players.parquet",
-        columns=[c for c in BOX_COLUMNS if c in pq.read_schema(
-            args.staging_root / f"season={args.season}" / "boxscore_players.parquet").names],
+        columns=[
+            c
+            for c in BOX_COLUMNS
+            if c in pq.read_schema(args.staging_root / f"season={args.season}" / "boxscore_players.parquet").names
+        ],
     ).to_pylist()
     by_game = {}
     for row in box:
@@ -261,8 +282,14 @@ def main():
         print("  ", note)
 
     args.log_dir.mkdir(parents=True, exist_ok=True)
-    report = {"season": args.season, "games": sample, "compared": dict(compared), "identical": dict(same),
-              "differences": differences, "notes": notes}
+    report = {
+        "season": args.season,
+        "games": sample,
+        "compared": dict(compared),
+        "identical": dict(same),
+        "differences": differences,
+        "notes": notes,
+    }
     (args.log_dir / "compare_boxscore_to_nhl.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return 0
 

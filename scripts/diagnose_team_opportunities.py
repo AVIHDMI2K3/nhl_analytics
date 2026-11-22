@@ -26,7 +26,6 @@ import argparse
 import gzip
 import heapq
 import json
-import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -45,9 +44,14 @@ def kept(penalties, ignore_end=None, late_seconds=0):
     ignore_end="regulation", only in games that did not go to overtime with "no_overtime"
     (rows then carry game_has_ot). With `late_seconds`, also the penalties in the last that many seconds
     of regulation in games that did not go to overtime."""
+
     def late(row):
-        return (late_seconds and row.get("period_type") == "REG" and not row.get("game_has_ot")
-                and row["game_seconds"] >= 3600 - late_seconds)
+        return (
+            late_seconds
+            and row.get("period_type") == "REG"
+            and not row.get("game_has_ot")
+            and row["game_seconds"] >= 3600 - late_seconds
+        )
 
     if ignore_end is None:
         return [r for r in penalties if not late(r)]
@@ -115,8 +119,16 @@ def count_opportunities_clock(penalties, ignore_end=None, steps=False):
     return opportunities, shorthanded
 
 
-def count_opportunities(penalties, offset=False, offset_majors=True, double_minor_twice=False,
-                        split_double_minors=False, ignore_end=None, late_seconds=0, minor_vs_major=False):
+def count_opportunities(
+    penalties,
+    offset=False,
+    offset_majors=True,
+    double_minor_twice=False,
+    split_double_minors=False,
+    ignore_end=None,
+    late_seconds=0,
+    minor_vs_major=False,
+):
     """({team_id: opportunities}, {team_id: times shorthanded}) from penalty event rows.
 
     `penalties` have game_id, game_seconds, event_owner_team_id (the penalized team), penalty_minutes and
@@ -194,12 +206,19 @@ def main():
     columns = pq.ParquetFile(path).schema_arrow.names
     detail = [c for c in columns if any(word in c for word in ("penalt", "desc", "type", "duration", "minor", "major"))]
     print(f"Season {args.season}: event columns that may describe a penalty: {detail}")
-    wanted = list(dict.fromkeys(["game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
-                                 "penalty_minutes"] + detail))
+    wanted = list(
+        dict.fromkeys(
+            ["game_id", "event_type", "period_type", "game_seconds", "event_owner_team_id", "penalty_minutes"] + detail
+        )
+    )
     events = pq.read_table(path, columns=[c for c in wanted if c in columns]).to_pylist()
-    games = {g["game_id"]: g for g in pq.read_table(
-        STAGING_ROOT / f"season={args.season}" / "games.parquet",
-        columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            STAGING_ROOT / f"season={args.season}" / "games.parquet",
+            columns=["game_id", "home_team_id", "away_team_id"],
+        ).to_pylist()
+    }
 
     penalties = []
     for event in events:
@@ -209,8 +228,10 @@ def main():
         home, away = game["home_team_id"], game["away_team_id"]
         event["opponent_team_id"] = away if event["event_owner_team_id"] == home else home
         penalties.append(event)
-    print(f"Penalty events: {len(penalties)}; penalty minutes and how often: "
-          f"{sorted(Counter(p['penalty_minutes'] for p in penalties).items(), key=lambda kv: (kv[0] is None, kv[0]))}")
+    print(
+        f"Penalty events: {len(penalties)}; penalty minutes and how often: "
+        f"{sorted(Counter(p['penalty_minutes'] for p in penalties).items(), key=lambda kv: (kv[0] is None, kv[0]))}"
+    )
     for column in detail:
         if column in ("penalty_minutes",):
             continue
@@ -232,8 +253,10 @@ def main():
     for label, options in variants:
         opp, short = count_opportunities(penalties, **options)
         a, b = compare(opp, nhl_opp), compare(short, nhl_short)
-        print(f"\n{label}: opportunities exact for {a[0]} of {a[1]} teams (ours {a[2]}, NHL {a[3]}); "
-              f"times shorthanded exact for {b[0]} of {b[1]} teams (ours {b[2]}, NHL {b[3]})")
+        print(
+            f"\n{label}: opportunities exact for {a[0]} of {a[1]} teams (ours {a[2]}, NHL {a[3]}); "
+            f"times shorthanded exact for {b[0]} of {b[1]} teams (ours {b[2]}, NHL {b[3]})"
+        )
         if best is None or a[0] + b[0] > best[0]:
             best = (a[0] + b[0], label, opp, short)
     _, label, opp, short = best
@@ -244,8 +267,10 @@ def main():
     print(f"\nTeams furthest from the NHL under '{label}' (ours minus NHL):")
     rows = sorted(nhl_opp, key=lambda t: -abs(opp.get(t, 0) - nhl_opp[t]))[:8]
     for t in rows:
-        print(f"  {names[t]:26s} opportunities {opp.get(t, 0):4d} vs {nhl_opp[t]:4d}  "
-              f"shorthanded {short.get(t, 0):4d} vs {nhl_short.get(t, 0):4d}")
+        print(
+            f"  {names[t]:26s} opportunities {opp.get(t, 0):4d} vs {nhl_opp[t]:4d}  "
+            f"shorthanded {short.get(t, 0):4d} vs {nhl_short.get(t, 0):4d}"
+        )
 
 
 if __name__ == "__main__":

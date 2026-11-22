@@ -29,8 +29,13 @@ PER_60 = {
 }
 RATE_COLUMNS = ["toi_per_game_seconds", "shooting_pct"] + list(PER_60)
 GOALIE_RATE_COLUMNS = [
-    "toi_per_game_seconds", "save_pct", "even_strength_save_pct", "power_play_save_pct",
-    "shorthanded_save_pct", "goals_against_avg", "shots_against_per_60",
+    "toi_per_game_seconds",
+    "save_pct",
+    "even_strength_save_pct",
+    "power_play_save_pct",
+    "shorthanded_save_pct",
+    "goals_against_avg",
+    "shots_against_per_60",
 ]
 STRENGTH_SAVE_PCT = {  # rate -> the strength's shots and goals against
     "even_strength_save_pct": ("even_strength_shots_against", "even_strength_goals_against"),
@@ -87,17 +92,26 @@ def build_season_display(totals, names, team_abbrevs, sum_columns=SUM_COLUMNS, a
         team_rows = []
         for row, abbrev in zip(teams, abbrevs):
             shown = {
-                "player_id": player_id, "name": name, "position": row["position"], "kind": "team",
-                "team_id": row["team_id"], "team": abbrev, "teams": ", ".join(abbrevs),
+                "player_id": player_id,
+                "name": name,
+                "position": row["position"],
+                "kind": "team",
+                "team_id": row["team_id"],
+                "team": abbrev,
+                "teams": ", ".join(abbrevs),
                 "games_played": row["games_played"],
             }
             shown.update({column: row[column] for column in sum_columns})
             team_rows.append(add_rates_to(shown))
         if len(team_rows) > 1:
             combined = {
-                "player_id": player_id, "name": name,
+                "player_id": player_id,
+                "name": name,
                 "position": max(team_rows, key=lambda r: r["games_played"])["position"],
-                "kind": "total", "team_id": None, "team": TOTAL_TEAM, "teams": ", ".join(abbrevs),
+                "kind": "total",
+                "team_id": None,
+                "team": TOTAL_TEAM,
+                "teams": ", ".join(abbrevs),
                 "games_played": sum(r["games_played"] for r in team_rows),
             }
             combined.update({column: sum(r[column] for r in team_rows) for column in sum_columns})

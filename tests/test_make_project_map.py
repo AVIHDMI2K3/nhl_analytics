@@ -14,7 +14,10 @@ def write(path, text):
 
 def test_describe_python_file_reads_docstring_functions_classes_and_tests(tmp_path):
     path = tmp_path / "module.py"
-    write(path, '"""\nDoes one thing.\n\nMore detail.\n"""\n\nclass Box:\n    pass\n\n\ndef helper():\n    pass\n\n\ndef test_a():\n    pass\n\n\ndef test_b():\n    pass\n')
+    write(
+        path,
+        '"""\nDoes one thing.\n\nMore detail.\n"""\n\nclass Box:\n    pass\n\n\ndef helper():\n    pass\n\n\ndef test_a():\n    pass\n\n\ndef test_b():\n    pass\n',
+    )
     info = make_project_map.describe_python_file(path)
     assert info == {"purpose": "Does one thing.", "functions": ["helper"], "classes": ["Box"], "tests": 2}
 

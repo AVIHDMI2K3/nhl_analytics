@@ -48,9 +48,11 @@ def main():
         if row["player_group"] != "goalies" and (row["toi_seconds"] or 0) > 0:
             with_ice[row["player_id"]].add(row["game_id"])
 
-    print(f"\nNHL skaters: {len(reference)}; ours: {len(ours)}; "
-          f"in the NHL report but not ours: {len(set(reference) - set(ours))}; "
-          f"ours but not the NHL's: {len(set(ours) - set(reference))}")
+    print(
+        f"\nNHL skaters: {len(reference)}; ours: {len(ours)}; "
+        f"in the NHL report but not ours: {len(set(reference) - set(ours))}; "
+        f"ours but not the NHL's: {len(set(ours) - set(reference))}"
+    )
     games_listed = games_with_ice = toi_exact = toi_close = compared = 0
     toi_ours = toi_nhl = 0
     worst = []

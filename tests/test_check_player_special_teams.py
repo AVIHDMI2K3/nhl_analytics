@@ -17,7 +17,9 @@ def state(player=7, strength="pp", seconds=60, **numbers):
 
 def test_power_play_and_shorthanded_rows_are_summed_separately_and_even_strength_is_ignored():
     rows = [
-        state(strength="pp", seconds=100, ind_goal=1, ind_sog=2, ind_miss=1, ind_block=1, assists_primary=1, for_goal=1),
+        state(
+            strength="pp", seconds=100, ind_goal=1, ind_sog=2, ind_miss=1, ind_block=1, assists_primary=1, for_goal=1
+        ),
         state(strength="pp", seconds=50, assists_secondary=2, against_goal=0),
         state(strength="sh", seconds=30, ind_goal=1, against_goal=2),
         state(strength="ev", seconds=999, ind_goal=9),

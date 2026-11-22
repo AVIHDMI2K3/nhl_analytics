@@ -27,8 +27,10 @@ def stats_of(row):
     """seconds, Corsi and goals for and against of a row with seconds and for_/against_ counts."""
     return {
         "seconds": row["seconds"],
-        "cf": sum(row[f"for_{k}"] for k in KINDS), "ca": sum(row[f"against_{k}"] for k in KINDS),
-        "gf": row["for_goal"], "ga": row["against_goal"],
+        "cf": sum(row[f"for_{k}"] for k in KINDS),
+        "ca": sum(row[f"against_{k}"] for k in KINDS),
+        "gf": row["for_goal"],
+        "ga": row["against_goal"],
     }
 
 
@@ -46,7 +48,13 @@ def player_totals(player_rows):
     """{(player_id, team_id): Counter of STATS} for the 5v5 state rows of player_game_strength."""
     totals = defaultdict(Counter)
     for row in player_rows:
-        state = (row["strength"], row["skaters_for"], row["skaters_against"], row["goalies_for"], row["goalies_against"])
+        state = (
+            row["strength"],
+            row["skaters_for"],
+            row["skaters_against"],
+            row["goalies_for"],
+            row["goalies_against"],
+        )
         if is_five_on_five(state):
             totals[(row["player_id"], row["team_id"])].update(stats_of(row))
     return totals
@@ -87,8 +95,10 @@ def main():
     print("Unit sum above the player's own total (must be 0): " + ", ".join(f"{s} {above[s]}" for s in STATS))
     print("Units' share of the players' 5v5 totals: " + ", ".join(f"{s} {100 * share[s]:.1f}%" for s in STATS))
     print(f"Skaters in a unit with no 5v5 rows of their own: {missing}")
-    print("Largest shortfalls in seconds (player, team: units / total): " + "; ".join(
-        f"{k[0]}, {k[1]}: {mine} / {total}" for _, k, mine, total in shortfalls))
+    print(
+        "Largest shortfalls in seconds (player, team: units / total): "
+        + "; ".join(f"{k[0]}, {k[1]}: {mine} / {total}" for _, k, mine, total in shortfalls)
+    )
 
 
 if __name__ == "__main__":

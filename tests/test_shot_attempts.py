@@ -9,9 +9,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import build_shot_attempts  # noqa: E402
 import shot_attempts  # noqa: E402
@@ -21,12 +19,25 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 
 def event(event_id, event_type, owner, code="1551", period_type="REG", **extra):
     row = {
-        "game_id": 1, "event_id": event_id, "sort_order": event_id, "period": 1,
-        "period_type": period_type, "seconds_in_period": event_id * 10,
-        "game_seconds": event_id * 10, "event_type": event_type, "situation_code": code,
-        "event_owner_team_id": owner, "x_coord": None, "y_coord": None, "zone_code": None,
-        "shot_type": None, "shooting_player_id": None, "scoring_player_id": None,
-        "goalie_in_net_id": None, "blocking_player_id": None, "home_defending_side": "left",
+        "game_id": 1,
+        "event_id": event_id,
+        "sort_order": event_id,
+        "period": 1,
+        "period_type": period_type,
+        "seconds_in_period": event_id * 10,
+        "game_seconds": event_id * 10,
+        "event_type": event_type,
+        "situation_code": code,
+        "event_owner_team_id": owner,
+        "x_coord": None,
+        "y_coord": None,
+        "zone_code": None,
+        "shot_type": None,
+        "shooting_player_id": None,
+        "scoring_player_id": None,
+        "goalie_in_net_id": None,
+        "blocking_player_id": None,
+        "home_defending_side": "left",
     }
     row.update(extra)
     return row
@@ -34,8 +45,10 @@ def event(event_id, event_type, owner, code="1551", period_type="REG", **extra):
 
 def on_ice_row(event_id, matches=True):
     return {
-        "event_id": event_id, "home_skater_ids": [11, 12, 13, 14, 15],
-        "away_skater_ids": [21, 22, 23, 24, 25], "matches_situation": matches,
+        "event_id": event_id,
+        "home_skater_ids": [11, 12, 13, 14, 15],
+        "away_skater_ids": [21, 22, 23, 24, 25],
+        "matches_situation": matches,
         "uses_conflicting_shift": False,
     }
 
@@ -92,10 +105,8 @@ def test_coordinates_are_turned_so_the_shooting_team_attacks_positive_x():
         [
             event(1, "shot-on-goal", 1, shooting_player_id=11, x_coord=70.0, y_coord=5.0),
             event(2, "shot-on-goal", 2, shooting_player_id=21, x_coord=-70.0, y_coord=-5.0),
-            event(3, "shot-on-goal", 1, shooting_player_id=11, x_coord=70.0, y_coord=5.0,
-                  home_defending_side="right"),
-            event(4, "shot-on-goal", 1, shooting_player_id=11, x_coord=70.0, y_coord=5.0,
-                  home_defending_side=None),
+            event(3, "shot-on-goal", 1, shooting_player_id=11, x_coord=70.0, y_coord=5.0, home_defending_side="right"),
+            event(4, "shot-on-goal", 1, shooting_player_id=11, x_coord=70.0, y_coord=5.0, home_defending_side=None),
         ]
     )
     assert [(r["x"], r["y"]) for r in rows] == [(70.0, 5.0), (70.0, 5.0), (-70.0, -5.0), (None, None)]

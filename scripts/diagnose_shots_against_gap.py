@@ -42,13 +42,26 @@ METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 SHOT_TYPES = ("goal", "shot-on-goal")
 PENALTY_SHOT_CODES = ("1010", "0101")
 EVENT_COLUMNS = [
-    "game_id", "event_id", "event_type", "period_type", "game_seconds", "event_owner_team_id",
-    "goalie_in_net_id", "situation_code",
+    "game_id",
+    "event_id",
+    "event_type",
+    "period_type",
+    "game_seconds",
+    "event_owner_team_id",
+    "goalie_in_net_id",
+    "situation_code",
 ]
 BOX_COLUMNS = ["game_id", "team_id", "player_group", "player_id", "sog", "shots_against"]
 RECORD_KEYS = (
-    "events", "overtime_events", "penalty_shots", "events_empty", "events_goalie", "stints_empty",
-    "outside_stints", "box_goalie_shots", "box_skater_shots",
+    "events",
+    "overtime_events",
+    "penalty_shots",
+    "events_empty",
+    "events_goalie",
+    "stints_empty",
+    "outside_stints",
+    "box_goalie_shots",
+    "box_skater_shots",
 )
 BUCKETS = (("0 s", 0), ("1 s", 1), ("2 s", 2), ("3-5 s", 5), ("6-10 s", 10), ("more", None))
 
@@ -115,11 +128,17 @@ def analyze_game(game, events, stints, box_rows):
                 if stint_empty != (goalie is None):
                     near = changes[defending_side]
                     distance = min((abs(event["game_seconds"] - t) for t in near), default=None)
-                    mismatches.append({
-                        "game_id": game["game_id"], "team_id": defender, "game_seconds": event["game_seconds"],
-                        "kind": "play-by-play empty, shifts show a goalie" if goalie is None else "play-by-play has a goalie, shifts show none",
-                        "distance": distance,
-                    })
+                    mismatches.append(
+                        {
+                            "game_id": game["game_id"],
+                            "team_id": defender,
+                            "game_seconds": event["game_seconds"],
+                            "kind": "play-by-play empty, shifts show a goalie"
+                            if goalie is None
+                            else "play-by-play has a goalie, shifts show none",
+                            "distance": distance,
+                        }
+                    )
             else:
                 record["outside_stints"] += 1
 
@@ -132,8 +151,15 @@ def analyze_game(game, events, stints, box_rows):
         record = records[row["team_id"]]
         if row["player_group"] == "goalies":
             record["box_goalie_shots"] += row["shots_against"] or 0
-            goalie_records.append({"game_id": game["game_id"], "player_id": row["player_id"], "team_id": row["team_id"],
-                                   "box": row["shots_against"] or 0, "events": goalie_events[row["player_id"]]})
+            goalie_records.append(
+                {
+                    "game_id": game["game_id"],
+                    "player_id": row["player_id"],
+                    "team_id": row["team_id"],
+                    "box": row["shots_against"] or 0,
+                    "events": goalie_events[row["player_id"]],
+                }
+            )
         else:
             records[opponent]["box_skater_shots"] += row["sog"] or 0
     return records, mismatches, goalie_records
@@ -141,7 +167,12 @@ def analyze_game(game, events, stints, box_rows):
 
 def team_record(game_id, team_id, has_shifts, record):
     """A plain dict with every count present (a Counter leaves out the ones that are zero)."""
-    return {"game_id": game_id, "team_id": team_id, "has_shifts": has_shifts, **{key: record[key] for key in RECORD_KEYS}}
+    return {
+        "game_id": game_id,
+        "team_id": team_id,
+        "has_shifts": has_shifts,
+        **{key: record[key] for key in RECORD_KEYS},
+    }
 
 
 def percent(part, whole):
@@ -155,9 +186,13 @@ def main():
     staging = STAGING_ROOT / f"season={args.season}"
     metrics = METRICS_ROOT / f"season={args.season}"
 
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
-    ).to_pylist() if g["game_type"] == 2 and g["has_boxscore"]}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "game_type", "has_boxscore", "home_team_id", "away_team_id"]
+        ).to_pylist()
+        if g["game_type"] == 2 and g["has_boxscore"]
+    }
     by_game = {name: defaultdict(list) for name in ("events", "stints", "box")}
     for row in pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist():
         by_game["events"][row["game_id"]].append(row)
@@ -169,7 +204,9 @@ def main():
     team_games, all_mismatches, goalie_games = [], [], []
     for game_id, game in games.items():
         stints = sorted(by_game["stints"].get(game_id, []), key=lambda r: r["start_game_seconds"])
-        records, mismatches, goalie_records = analyze_game(game, by_game["events"][game_id], stints, by_game["box"][game_id])
+        records, mismatches, goalie_records = analyze_game(
+            game, by_game["events"][game_id], stints, by_game["box"][game_id]
+        )
         for team_id, record in records.items():
             team_games.append(team_record(game_id, team_id, bool(stints), record))
         all_mismatches.extend(mismatches)
@@ -179,46 +216,71 @@ def main():
 
     print("\n1. Boxscore against play-by-play, team-games")
     checks = (
-        ("opponent skaters' shots (S) = shot and goal events by the opponent", lambda t: t["box_skater_shots"] == t["events"]),
-        ("goalies' shots against (G) = events that name one of the team's goalies", lambda t: t["box_goalie_shots"] == t["events_goalie"]),
-        ("S - G = events with no goalie named", lambda t: t["box_skater_shots"] - t["box_goalie_shots"] == t["events_empty"]),
+        (
+            "opponent skaters' shots (S) = shot and goal events by the opponent",
+            lambda t: t["box_skater_shots"] == t["events"],
+        ),
+        (
+            "goalies' shots against (G) = events that name one of the team's goalies",
+            lambda t: t["box_goalie_shots"] == t["events_goalie"],
+        ),
+        (
+            "S - G = events with no goalie named",
+            lambda t: t["box_skater_shots"] - t["box_goalie_shots"] == t["events_empty"],
+        ),
     )
     for label, test in checks:
         ok = sum(1 for t in team_games if test(t))
         print(f"  {label}: {ok} of {len(team_games)} ({percent(ok, len(team_games))})")
-    print(f"  totals: S {sum(t['box_skater_shots'] for t in team_games)}, G {sum(t['box_goalie_shots'] for t in team_games)}, "
-          f"events {sum(t['events'] for t in team_games)}, events with a goalie {sum(t['events_goalie'] for t in team_games)}, "
-          f"events with none {sum(t['events_empty'] for t in team_games)}")
+    print(
+        f"  totals: S {sum(t['box_skater_shots'] for t in team_games)}, G {sum(t['box_goalie_shots'] for t in team_games)}, "
+        f"events {sum(t['events'] for t in team_games)}, events with a goalie {sum(t['events_goalie'] for t in team_games)}, "
+        f"events with none {sum(t['events_empty'] for t in team_games)}"
+    )
 
     print("\n2. Shift timing: play-by-play and our shifts disagree about an empty net (games with shifts)")
-    print(f"  empty-net events in games with shifts: play-by-play {sum(t['events_empty'] for t in shifted)}, "
-          f"our shifts {sum(t['stints_empty'] for t in shifted)}; events outside our stints {sum(t['outside_stints'] for t in shifted)}")
+    print(
+        f"  empty-net events in games with shifts: play-by-play {sum(t['events_empty'] for t in shifted)}, "
+        f"our shifts {sum(t['stints_empty'] for t in shifted)}; events outside our stints {sum(t['outside_stints'] for t in shifted)}"
+    )
     for kind in sorted({m["kind"] for m in all_mismatches}):
         mine = [m for m in all_mismatches if m["kind"] == kind]
         histogram = Counter(bucket(m["distance"]) if m["distance"] is not None else "no change in game" for m in mine)
-        print(f"  {kind}: {len(mine)} events; seconds to the nearest goalie change in our shifts: "
-              + ", ".join(f"{name} {histogram[name]}" for name, _ in BUCKETS + (("no change in game", 0),) if histogram[name]))
+        print(
+            f"  {kind}: {len(mine)} events; seconds to the nearest goalie change in our shifts: "
+            + ", ".join(
+                f"{name} {histogram[name]}" for name, _ in BUCKETS + (("no change in game", 0),) if histogram[name]
+            )
+        )
     if not all_mismatches:
         print("  no disagreements")
 
     print("\n3. Team-games where S - G is not the play-by-play's empty-net count")
     off = [t for t in team_games if t["box_skater_shots"] - t["box_goalie_shots"] != t["events_empty"]]
-    print(f"  {len(off)} of {len(team_games)}; with overtime shots: {sum(1 for t in off if t['overtime_events'])}, "
-          f"with a penalty shot: {sum(1 for t in off if t['penalty_shots'])}")
+    print(
+        f"  {len(off)} of {len(team_games)}; with overtime shots: {sum(1 for t in off if t['overtime_events'])}, "
+        f"with a penalty shot: {sum(1 for t in off if t['penalty_shots'])}"
+    )
     base = [t for t in team_games if t not in off]
-    print(f"  for comparison, the others: overtime {percent(sum(1 for t in base if t['overtime_events']), len(base))}, "
-          f"penalty shot {percent(sum(1 for t in base if t['penalty_shots']), len(base))}; "
-          f"the off ones: overtime {percent(sum(1 for t in off if t['overtime_events']), len(off))}, "
-          f"penalty shot {percent(sum(1 for t in off if t['penalty_shots']), len(off))}")
+    print(
+        f"  for comparison, the others: overtime {percent(sum(1 for t in base if t['overtime_events']), len(base))}, "
+        f"penalty shot {percent(sum(1 for t in base if t['penalty_shots']), len(base))}; "
+        f"the off ones: overtime {percent(sum(1 for t in off if t['overtime_events']), len(off))}, "
+        f"penalty shot {percent(sum(1 for t in off if t['penalty_shots']), len(off))}"
+    )
     for t in sorted(off, key=lambda t: -abs(t["box_skater_shots"] - t["box_goalie_shots"] - t["events_empty"]))[:10]:
-        print(f"    game {t['game_id']} team {t['team_id']}: S {t['box_skater_shots']} G {t['box_goalie_shots']} "
-              f"S-G {t['box_skater_shots'] - t['box_goalie_shots']}, events {t['events']} (goalie {t['events_goalie']}, none {t['events_empty']}), "
-              f"our shifts none {t['stints_empty']}, penalty shots {t['penalty_shots']}")
+        print(
+            f"    game {t['game_id']} team {t['team_id']}: S {t['box_skater_shots']} G {t['box_goalie_shots']} "
+            f"S-G {t['box_skater_shots'] - t['box_goalie_shots']}, events {t['events']} (goalie {t['events_goalie']}, none {t['events_empty']}), "
+            f"our shifts none {t['stints_empty']}, penalty shots {t['penalty_shots']}"
+        )
 
     print("\n4. Each goalie's boxscore shots against vs events that name him")
     equal = sum(1 for g in goalie_games if g["box"] == g["events"])
     print(f"  equal for {equal} of {len(goalie_games)} goalie-games ({percent(equal, len(goalie_games))})")
-    for g in sorted((g for g in goalie_games if g["box"] != g["events"]), key=lambda g: -abs(g["box"] - g["events"]))[:8]:
+    for g in sorted((g for g in goalie_games if g["box"] != g["events"]), key=lambda g: -abs(g["box"] - g["events"]))[
+        :8
+    ]:
         print(f"    game {g['game_id']} goalie {g['player_id']}: boxscore {g['box']}, events {g['events']}")
 
 

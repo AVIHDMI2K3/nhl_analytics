@@ -92,8 +92,10 @@ def main():
     print(f"Season {args.season}: {len(report)} skaters in the NHL's faceoff report")
     for situation, (count_field, _) in FIELDS.items():
         n, exact, mine, theirs, worst, both, within, worst_pct = compare(totals, report, situation)
-        print(f"  {situation:3s} {count_field:24s} exact {exact:3d}/{n}  ours {mine} NHL {theirs}  worst {worst:+d} | "
-              f"win % within {TOLERANCE_POINTS} point for {within}/{both}, worst {worst_pct:+.2f}")
+        print(
+            f"  {situation:3s} {count_field:24s} exact {exact:3d}/{n}  ours {mine} NHL {theirs}  worst {worst:+d} | "
+            f"win % within {TOLERANCE_POINTS} point for {within}/{both}, worst {worst_pct:+.2f}"
+        )
 
 
 if __name__ == "__main__":

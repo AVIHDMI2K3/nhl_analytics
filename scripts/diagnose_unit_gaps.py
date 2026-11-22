@@ -63,10 +63,17 @@ def main():
 
     staging = REPO_ROOT / "data" / "staging" / f"season={args.season}"
     metrics = REPO_ROOT / "data" / "metrics" / f"season={args.season}"
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
-    positions = positions_by_game(pq.read_table(
-        staging / "boxscore_players.parquet", columns=["game_id", "player_id", "position", "player_group"]).to_pylist())
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]
+        ).to_pylist()
+    }
+    positions = positions_by_game(
+        pq.read_table(
+            staging / "boxscore_players.parquet", columns=["game_id", "player_id", "position", "player_group"]
+        ).to_pylist()
+    )
     stints_by_game = defaultdict(list)
     for stint in pq.read_table(metrics / "stints.parquet").to_pylist():
         stints_by_game[stint["game_id"]].append(stint)
@@ -75,9 +82,14 @@ def main():
     total = sum(by_composition.values())
     print(f"Season {args.season}: 5v5 side-seconds by composition (forwards, defensemen, no position), share of all")
     for kind, seconds in by_composition.most_common(8):
-        print(f"  {kind}  {seconds:9d} s  {100 * seconds / total:5.2f}%" + ("   <- a standard line and pair" if kind == STANDARD else ""))
+        print(
+            f"  {kind}  {seconds:9d} s  {100 * seconds / total:5.2f}%"
+            + ("   <- a standard line and pair" if kind == STANDARD else "")
+        )
     print("\nTeams with the largest share of 5v5 time without a standard composition:")
-    for team_id, (standard, other) in sorted(by_team.items(), key=lambda item: -item[1][1] / (item[1][0] + item[1][1]))[:6]:
+    for team_id, (standard, other) in sorted(by_team.items(), key=lambda item: -item[1][1] / (item[1][0] + item[1][1]))[
+        :6
+    ]:
         print(f"  team {team_id}: {100 * other / (standard + other):.1f}% ({other / 60:.0f} min)")
     mixed = mixed_positions(positions)
     print(f"\nPlayers the boxscore lists as both a forward and a defenseman: {len(mixed)}")

@@ -133,8 +133,13 @@ def goal_counts(attempts, shifts_by_game):
 def score_stat(counter, nst_by_player, index):
     """(skaters, exact, within 2, within 5, mean absolute gap) of one statistic (index 0 = CF, 1 = CA) against NST."""
     gaps = [abs(counter[player] - values[index]) for player, values in nst_by_player.items()]
-    return (len(gaps), sum(g == 0 for g in gaps), sum(g <= 2 for g in gaps), sum(g <= 5 for g in gaps),
-            sum(gaps) / len(gaps) if gaps else None)
+    return (
+        len(gaps),
+        sum(g == 0 for g in gaps),
+        sum(g <= 2 for g in gaps),
+        sum(g <= 5 for g in gaps),
+        sum(gaps) / len(gaps) if gaps else None,
+    )
 
 
 def best_rules_by_type(by_type, goals, nst_by_player):
@@ -174,8 +179,10 @@ def main():
     import pyarrow.parquet as pq
 
     metrics = METRICS_ROOT / f"season={args.season}"
-    attempts = pq.read_table(metrics / "shot_attempts.parquet", columns=[
-        "game_id", "game_seconds", "attempt_type", "team_id", "opponent_team_id"]).to_pylist()
+    attempts = pq.read_table(
+        metrics / "shot_attempts.parquet",
+        columns=["game_id", "game_seconds", "attempt_type", "team_id", "opponent_team_id"],
+    ).to_pylist()
     shifts_by_game = defaultdict(list)
     for row in pq.read_table(INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet").to_pylist():
         if row.get("is_goalie"):
@@ -183,39 +190,57 @@ def main():
         start = row["start"] if "start" in row else row["start_game_seconds"]
         end = row["end"] if "end" in row else row["end_game_seconds"]
         shifts_by_game[row["game_id"]].append(
-            {"player_id": row["player_id"], "team_id": row["team_id"], "start": start, "end": end})
+            {"player_id": row["player_id"], "team_id": row["team_id"], "start": start, "end": end}
+        )
 
     players = pq.read_table(metrics / "player_season_advanced.parquet").to_pylist()
     ours = [r for r in players if r["situation"] == "all" and (r["kind"] == "total" or r["teams"] == r["team"])]
     nst_rows = read_nst(args.folder / f"nst_skaters_all_{args.season}.csv")
     matched, _, _ = match_skaters(nst_rows, ours)
-    nst_by_player = {mine["player_id"]: (number(nst_rows[i]["CF"]), number(nst_rows[i]["CA"])) for i, mine in matched.items()}
+    nst_by_player = {
+        mine["player_id"]: (number(nst_rows[i]["CF"]), number(nst_rows[i]["CA"])) for i, mine in matched.items()
+    }
 
     def run(schemes, title):
         counts = count_corsi(attempts, shifts_by_game, schemes)
-        results = sorted(((score(counter, nst_by_player), scheme) for scheme, counter in counts.items()),
-                         key=lambda item: item[0][4])
+        results = sorted(
+            ((score(counter, nst_by_player), scheme) for scheme, counter in counts.items()), key=lambda item: item[0][4]
+        )
         print(f"\n{title}")
-        print(f"  {'non-goals: shooting/other':26s} {'goals: shooting/other':22s} {'CF exact':>9s} {'CA exact':>9s} "
-              f"{'both within 2':>14s} {'mean |gap|':>11s}")
+        print(
+            f"  {'non-goals: shooting/other':26s} {'goals: shooting/other':22s} {'CF exact':>9s} {'CA exact':>9s} "
+            f"{'both within 2':>14s} {'mean |gap|':>11s}"
+        )
         for (n, cf_exact, ca_exact, near, mean), scheme in results:
             mark = "  <- what we use now" if scheme == CURRENT else ""
-            print(f"  {scheme[0] + '/' + scheme[1]:26s} {scheme[2] + '/' + scheme[3]:22s} {cf_exact:9d} {ca_exact:9d} {near:14d} {mean:11.2f}{mark}")
+            print(
+                f"  {scheme[0] + '/' + scheme[1]:26s} {scheme[2] + '/' + scheme[3]:22s} {cf_exact:9d} {ca_exact:9d} {near:14d} {mean:11.2f}{mark}"
+            )
         return results[0][1]
 
-    print(f"Season {args.season}: per-skater Corsi (all situations), {len(nst_by_player)} skaters, from the shifts, against NST")
+    print(
+        f"Season {args.season}: per-skater Corsi (all situations), {len(nst_by_player)} skaters, from the shifts, against NST"
+    )
     best = run([(a, b, "end", "end") for a in RULES for b in RULES], "Stage 1: non-goal rules (goals end/end)")
-    run([(best[0], best[1], a, b) for a in RULES for b in RULES],
-        f"Stage 2: goal rules (non-goals {best[0]}/{best[1]})")
+    run(
+        [(best[0], best[1], a, b) for a in RULES for b in RULES], f"Stage 2: goal rules (non-goals {best[0]}/{best[1]})"
+    )
 
-    by_type = best_rules_by_type(count_by_type(attempts, shifts_by_game), goal_counts(attempts, shifts_by_game), nst_by_player)
-    print("\nStage 3: one rule per attempt type (goals end), chosen separately for Corsi for (shooting team's skaters) "
-          "and Corsi against (the other team's); best five each")
+    by_type = best_rules_by_type(
+        count_by_type(attempts, shifts_by_game), goal_counts(attempts, shifts_by_game), nst_by_player
+    )
+    print(
+        "\nStage 3: one rule per attempt type (goals end), chosen separately for Corsi for (shooting team's skaters) "
+        "and Corsi against (the other team's); best five each"
+    )
     for stat, label in (("cf", "Corsi for"), ("ca", "Corsi against")):
         print(f"  {label}: shots on goal / misses / blocks      exact  within 2  within 5  mean |gap|")
         for (n, exact, near, within5, mean), combo in by_type[stat][:5]:
             mark = "  <- what we use now" if combo == (("start",) * 3 if stat == "cf" else ("end",) * 3) else ""
-            print(f"    {combo[0]:8s} {combo[1]:8s} {combo[2]:8s}        {exact:5d} {near:9d} {within5:9d} {mean:11.2f}{mark}")
+            print(
+                f"    {combo[0]:8s} {combo[1]:8s} {combo[2]:8s}        {exact:5d} {near:9d} {within5:9d} {mean:11.2f}{mark}"
+            )
+
 
 if __name__ == "__main__":
     main()

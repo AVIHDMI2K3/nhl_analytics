@@ -11,9 +11,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import build_onice  # noqa: E402
 import onice  # noqa: E402
@@ -24,9 +22,14 @@ GOALIES = {10, 40}
 
 def shift(player, team, start, end, period=1, number=None):
     return {
-        "game_id": 1, "player_id": player, "team_id": team, "period": period,
-        "shift_number": number, "shift_id": number,
-        "start_game_seconds": start, "end_game_seconds": end,
+        "game_id": 1,
+        "player_id": player,
+        "team_id": team,
+        "period": period,
+        "shift_number": number,
+        "shift_id": number,
+        "start_game_seconds": start,
+        "end_game_seconds": end,
     }
 
 
@@ -41,9 +44,15 @@ def game_shifts():
 
 def event(event_id, t, event_type, code="1551", owner=None, period_type="REG"):
     return {
-        "game_id": 1, "event_id": event_id, "sort_order": event_id, "period": 1,
-        "period_type": period_type, "game_seconds": t, "event_type": event_type,
-        "situation_code": code, "event_owner_team_id": owner,
+        "game_id": 1,
+        "event_id": event_id,
+        "sort_order": event_id,
+        "period": 1,
+        "period_type": period_type,
+        "game_seconds": t,
+        "event_type": event_type,
+        "situation_code": code,
+        "event_owner_team_id": owner,
     }
 
 
@@ -52,7 +61,10 @@ def event(event_id, t, event_type, code="1551", owner=None, period_type="REG"):
 
 def test_parse_situation_code_gives_the_confirmed_digit_order():
     assert onice.parse_situation_code("1451") == {
-        "away_goalie": 1, "away_skaters": 4, "home_skaters": 5, "home_goalie": 1,
+        "away_goalie": 1,
+        "away_skaters": 4,
+        "home_skaters": 5,
+        "home_goalie": 1,
     }
     for bad in (None, "", "155", "15511", "15x1"):
         assert onice.parse_situation_code(bad) is None
@@ -119,9 +131,7 @@ def build(events, shifts=None):
 
 
 def test_each_event_type_uses_its_own_boundary_rule():
-    rows = {r["event_type"]: r for r in build(
-        [event(1, 60, "faceoff"), event(2, 60, "goal", owner=1)]
-    )}
+    rows = {r["event_type"]: r for r in build([event(1, 60, "faceoff"), event(2, 60, "goal", owner=1)])}
     assert rows["faceoff"]["home_skater_ids"] == [16, 17, 18, 19, 20]  # new line starts
     assert rows["goal"]["home_skater_ids"] == [11, 12, 13, 14, 15]  # old line was still on
     assert rows["goal"]["away_skater_ids"] == [21, 22, 23, 24, 25]
@@ -131,12 +141,14 @@ def test_each_event_type_uses_its_own_boundary_rule():
 
 
 def test_disagreement_missing_code_shootout_and_missing_clock():
-    rows = build([
-        event(1, 30, "shot-on-goal", code="1451"),  # away has 5 on ice, code says 4
-        event(2, 31, "hit", code=None),
-        event(3, 32, "shot-on-goal", period_type="SO"),
-        {**event(4, 33, "hit"), "game_seconds": None},
-    ])
+    rows = build(
+        [
+            event(1, 30, "shot-on-goal", code="1451"),  # away has 5 on ice, code says 4
+            event(2, 31, "hit", code=None),
+            event(3, 32, "shot-on-goal", period_type="SO"),
+            {**event(4, 33, "hit"), "game_seconds": None},
+        ]
+    )
     assert [r["event_id"] for r in rows] == [1, 2]
     assert rows[0]["matches_situation"] is False
     assert rows[0]["away_skaters_on_ice"] == 5 and rows[0]["away_skaters_code"] == 4
@@ -160,12 +172,14 @@ def test_events_come_back_in_the_nhl_order():
 
 
 def test_plus_minus_counts_even_strength_and_shorthanded_but_not_power_play_goals():
-    rows = build([
-        event(1, 30, "goal", code="1551", owner=1),  # even strength, home scores
-        event(2, 40, "goal", code="1451", owner=1),  # home power play: not counted
-        event(3, 50, "goal", code="1541", owner=1),  # home shorthanded: counted
-        event(4, 55, "goal", code="1560", owner=2),  # home goalie pulled, away scores: counted
-    ])
+    rows = build(
+        [
+            event(1, 30, "goal", code="1551", owner=1),  # even strength, home scores
+            event(2, 40, "goal", code="1451", owner=1),  # home power play: not counted
+            event(3, 50, "goal", code="1541", owner=1),  # home shorthanded: counted
+            event(4, 55, "goal", code="1560", owner=2),  # home goalie pulled, away scores: counted
+        ]
+    )
     totals = onice.game_plus_minus(GAME, rows)
     assert {p: totals[p] for p in (11, 12, 13, 14, 15)} == {p: 1 for p in range(11, 16)}
     assert {p: totals[p] for p in (21, 22, 23, 24, 25)} == {p: -1 for p in range(21, 26)}
@@ -173,10 +187,12 @@ def test_plus_minus_counts_even_strength_and_shorthanded_but_not_power_play_goal
 
 
 def test_plus_minus_power_play_ignores_the_extra_attacker():
-    rows = build([
-        event(1, 30, "goal", code="0551", owner=1),  # away goalie pulled while short: home power play
-        event(2, 40, "goal", code="0641", owner=2),  # away 6 skaters, no goalie, vs 4: away power play
-    ])
+    rows = build(
+        [
+            event(1, 30, "goal", code="0551", owner=1),  # away goalie pulled while short: home power play
+            event(2, 40, "goal", code="0641", owner=2),  # away 6 skaters, no goalie, vs 4: away power play
+        ]
+    )
     assert onice.game_plus_minus(GAME, rows) == {}
     rows = build([event(1, 50, "goal", code="0651", owner=2)])  # even-strength empty net: counts
     totals = onice.game_plus_minus(GAME, rows)
@@ -185,10 +201,12 @@ def test_plus_minus_power_play_ignores_the_extra_attacker():
 
 
 def test_plus_minus_ignores_penalty_shot_goals():
-    rows = build([
-        event(1, 30, "goal", code="1010", owner=1),  # home penalty shot: not counted
-        event(2, 40, "goal", code="0101", owner=2),  # away penalty shot: not counted
-    ])
+    rows = build(
+        [
+            event(1, 30, "goal", code="1010", owner=1),  # home penalty shot: not counted
+            event(2, 40, "goal", code="0101", owner=2),  # away penalty shot: not counted
+        ]
+    )
     assert onice.game_plus_minus(GAME, rows) == {}
 
 
@@ -233,7 +251,8 @@ def test_skater_rows_never_fill():
 
 def test_other_goalie_of_the_team_covers_his_time():
     rows = [
-        shift(10, 1, 2400, 3000, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2),
+        shift(10, 1, 2400, 3000, period=3, number=1),
+        shift(10, 1, 2400, 3600, period=3, number=2),
         shift(11, 1, 3000, 3600, period=3, number=1),
     ]
     assert goalie_spans(onice.clean_shifts(rows, {10, 11}), 1) == [(2400, 3000), (3000, 3600)]
@@ -241,7 +260,8 @@ def test_other_goalie_of_the_team_covers_his_time():
 
 def test_other_team_goalie_does_not_cover():
     rows = [
-        shift(10, 1, 2400, 2636, period=3, number=1), shift(10, 1, 2400, 3600, period=3, number=2),
+        shift(10, 1, 2400, 2636, period=3, number=1),
+        shift(10, 1, 2400, 3600, period=3, number=2),
         shift(40, 2, 2400, 3600, period=3, number=1),
     ]
     cleaned = onice.clean_shifts(rows, GOALIES)

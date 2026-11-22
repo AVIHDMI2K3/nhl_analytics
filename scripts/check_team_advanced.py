@@ -35,18 +35,24 @@ def main():
     for situation in ("all", "5v5"):
         rows = [r for r in teams if r["situation"] == situation]
         cf, ca = sum(r["cf"] for r in rows), sum(r["ca"] for r in rows)
-        print(f"  {situation:4s} for {cf}, against {ca}: {'equal' if cf == ca else 'NOT equal, difference ' + str(cf - ca)}")
+        print(
+            f"  {situation:4s} for {cf}, against {ca}: {'equal' if cf == ca else 'NOT equal, difference ' + str(cf - ca)}"
+        )
 
     five_team = sum(r["cf"] for r in teams if r["situation"] == "5v5")
     five_players = sum(r["cf"] for r in players if r["kind"] == "team" and r["situation"] == "5v5")
-    print(f"\n2. 5 x team Corsi for {5 * five_team} vs players' on-ice Corsi for {five_players}: "
-          f"{'equal' if 5 * five_team == five_players else 'NOT equal'}")
+    print(
+        f"\n2. 5 x team Corsi for {5 * five_team} vs players' on-ice Corsi for {five_players}: "
+        f"{'equal' if 5 * five_team == five_players else 'NOT equal'}"
+    )
 
     print("\n3. Time per game in 'all' (seconds; regulation is 3600)")
     per_game = sorted((r["seconds"] / r["games_included"], r["team"]) for r in teams if r["situation"] == "all")
     print(f"  lowest {per_game[0][0]:.0f} ({per_game[0][1]}), highest {per_game[-1][0]:.0f} ({per_game[-1][1]})")
 
-    print("\n4. Goals for and against, all situations (attempts that were goals; shootouts and penalty shots are not in them)")
+    print(
+        "\n4. Goals for and against, all situations (attempts that were goals; shootouts and penalty shots are not in them)"
+    )
     for r in sorted((r for r in teams if r["situation"] == "all"), key=lambda r: r["team"]):
         print(f"  {r['team']:4s} GP {r['games_played']:3d}/{r['games_included']:3d}  GF {r['gf']:3d}  GA {r['ga']:3d}")
 

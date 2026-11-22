@@ -14,8 +14,15 @@ GAMES = {1: {"home_team_id": 10, "away_team_id": 20}}
 
 
 def faceoff(winner, loser, owner=10, zone="O", code="1551", game=1, kind="faceoff"):
-    return {"game_id": game, "event_type": kind, "event_owner_team_id": owner, "zone_code": zone,
-            "situation_code": code, "winning_player_id": winner, "losing_player_id": loser}
+    return {
+        "game_id": game,
+        "event_type": kind,
+        "event_owner_team_id": owner,
+        "zone_code": zone,
+        "situation_code": code,
+        "winning_player_id": winner,
+        "losing_player_id": loser,
+    }
 
 
 def test_each_faceoff_is_a_win_for_one_skater_and_a_loss_for_the_other_with_the_zone_flipped():
@@ -53,12 +60,16 @@ def test_rates():
 
 def test_check_helpers():
     assert c.percent_scale([0.5, None, 0.62]) == 100 and c.percent_scale([55.0, 40.0]) == 1
-    rows = [{"kind": "team", "player_id": 1, "situation": "all", "faceoffs": 6, "faceoff_wins": 3},
-            {"kind": "team", "player_id": 1, "situation": "all", "faceoffs": 4, "faceoff_wins": 3},
-            {"kind": "total", "player_id": 1, "situation": "all", "faceoffs": 10, "faceoff_wins": 6}]
+    rows = [
+        {"kind": "team", "player_id": 1, "situation": "all", "faceoffs": 6, "faceoff_wins": 3},
+        {"kind": "team", "player_id": 1, "situation": "all", "faceoffs": 4, "faceoff_wins": 3},
+        {"kind": "total", "player_id": 1, "situation": "all", "faceoffs": 10, "faceoff_wins": 6},
+    ]
     totals = c.our_totals(rows)
     assert totals[(1, "all")] == [10, 6]
-    report = [{"playerId": 1, "totalFaceoffs": 10, "faceoffWinPct": 0.6},
-              {"playerId": 2, "totalFaceoffs": 0, "faceoffWinPct": None}]
+    report = [
+        {"playerId": 1, "totalFaceoffs": 10, "faceoffWinPct": 0.6},
+        {"playerId": 2, "totalFaceoffs": 0, "faceoffWinPct": None},
+    ]
     n, exact, mine, theirs, worst, both, within, worst_pct = c.compare(totals, report, "all")
     assert (n, exact, mine, theirs, worst, both, within) == (2, 2, 10, 10, 0, 1, 1) and abs(worst_pct) < 1e-9

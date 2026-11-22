@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from player_app import build_player_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -38,25 +37,37 @@ def main():
 
     metrics = args.metrics_root / f"season={args.season}"
     read = lambda name: pq.read_table(metrics / f"{name}.parquet").to_pylist()  # noqa: E731
-    rows = build_player_rows(read("player_season_display"), read("player_season_advanced"),
-                             read("player_season_special_teams"), read("player_season_faceoffs"))
+    rows = build_player_rows(
+        read("player_season_display"),
+        read("player_season_advanced"),
+        read("player_season_special_teams"),
+        read("player_season_faceoffs"),
+    )
     out = metrics / "player_season_app.parquet"
     pq.write_table(pa.Table.from_pylist(rows), out, compression="zstd")
 
     print(f"season {args.season}: {len(rows)} rows, {len(rows[0])} columns -> {out}")
-    for label, column in (("5v5", "minutes_5v5"), ("power play", "pp_minutes"), ("penalty kill", "pk_minutes"),
-                          ("faceoffs", "fo_faceoffs")):
+    for label, column in (
+        ("5v5", "minutes_5v5"),
+        ("power play", "pp_minutes"),
+        ("penalty kill", "pk_minutes"),
+        ("faceoffs", "fo_faceoffs"),
+    ):
         missing = sum(1 for r in rows if r[column] is None)
         print(f"  rows with no {label} row: {missing}")
 
-    print(f"\n  {'player':<18} {'kind':<5} {'GP':>3} {'G':>3} {'A':>3} {'PTS':>4} {'5v5 min':>8} {'CF%':>5} "
-          f"{'RelCF%':>6} {'PP min':>7} {'PK min':>7} {'FO':>5} {'FO%':>5}")
+    print(
+        f"\n  {'player':<18} {'kind':<5} {'GP':>3} {'G':>3} {'A':>3} {'PTS':>4} {'5v5 min':>8} {'CF%':>5} "
+        f"{'RelCF%':>6} {'PP min':>7} {'PK min':>7} {'FO':>5} {'FO%':>5}"
+    )
     for r in rows:
         if r["name"] in SAMPLE_PLAYERS:
-            print(f"  {r['name']:<18} {r['kind']:<5} {r['games_played']:>3} {r['goals']:>3} {r['assists']:>3} "
-                  f"{r['points']:>4} {fmt(r['minutes_5v5'], 8)} {fmt(r['cf_pct_5v5'], 5)} "
-                  f"{fmt(r['cf_pct_rel_5v5'], 6)} {fmt(r['pp_minutes'], 7)} {fmt(r['pk_minutes'], 7)} "
-                  f"{fmt(r['fo_faceoffs'], 5, 0)} {fmt(r['fo_pct'], 5)}")
+            print(
+                f"  {r['name']:<18} {r['kind']:<5} {r['games_played']:>3} {r['goals']:>3} {r['assists']:>3} "
+                f"{r['points']:>4} {fmt(r['minutes_5v5'], 8)} {fmt(r['cf_pct_5v5'], 5)} "
+                f"{fmt(r['cf_pct_rel_5v5'], 6)} {fmt(r['pp_minutes'], 7)} {fmt(r['pk_minutes'], 7)} "
+                f"{fmt(r['fo_faceoffs'], 5, 0)} {fmt(r['fo_pct'], 5)}"
+            )
 
 
 if __name__ == "__main__":

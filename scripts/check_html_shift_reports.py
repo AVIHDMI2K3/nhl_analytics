@@ -47,8 +47,10 @@ def main():
             try:
                 response = requests.get(url, headers=HEADERS, timeout=30)
                 players, shifts = summarize(response.text)
-                print(f"{game_id} {label:7s} HTTP {response.status_code}  {len(response.content):7d} bytes  "
-                      f"{players:3d} players  {shifts:5d} shift rows   {url}")
+                print(
+                    f"{game_id} {label:7s} HTTP {response.status_code}  {len(response.content):7d} bytes  "
+                    f"{players:3d} players  {shifts:5d} shift rows   {url}"
+                )
             except requests.RequestException as error:
                 print(f"{game_id} {label:7s} request failed: {error}")
             time.sleep(args.pause)

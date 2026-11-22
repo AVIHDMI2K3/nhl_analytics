@@ -74,8 +74,18 @@ def compare_by_game(team_rows, box_rows, code_goals=None):
             opponent = next(iter(opponents))
             for situation, column in BOX_COLUMN.items():
                 key = (situation, game_id, team_id)
-                out.append((situation, game_id, team_id, ours[key], charged[(game_id, opponent)][column], in_net[key],
-                            code_all[key], code_net[key]))
+                out.append(
+                    (
+                        situation,
+                        game_id,
+                        team_id,
+                        ours[key],
+                        charged[(game_id, opponent)][column],
+                        in_net[key],
+                        code_all[key],
+                        code_net[key],
+                    )
+                )
     return out
 
 
@@ -93,22 +103,40 @@ def main():
         columns=["game_id", "team_id", "player_group"] + list(BOX_COLUMN.values()),
     ).to_pylist()
     goal_rows = [
-        g for g in pq.read_table(
+        g
+        for g in pq.read_table(
             METRICS_ROOT / f"season={args.season}" / "shot_attempts.parquet",
-            columns=["game_id", "team_id", "attempt_type", "skaters_for", "skaters_against", "goalie_for", "goalie_against"],
-        ).to_pylist() if g["attempt_type"] == "goal"
+            columns=[
+                "game_id",
+                "team_id",
+                "attempt_type",
+                "skaters_for",
+                "skaters_against",
+                "goalie_for",
+                "goalie_against",
+            ],
+        ).to_pylist()
+        if g["attempt_type"] == "goal"
     ]
     rows = compare_by_game(team_rows, box_rows, code_goal_counts(goal_rows))
     for situation, label in (("pp", "Power-play goals"), ("sh", "Shorthanded goals")):
         part = [r for r in rows if r[0] == situation]
-        print(f"\n{label}: {len(part)} team-games; total ours {sum(r[3] for r in part)} "
-              f"(with a goalie in net {sum(r[5] for r in part)}), by situation code {sum(r[6] for r in part)} "
-              f"(with a goalie in net {sum(r[7] for r in part)}), boxscore {sum(r[4] for r in part)}")
-        for name, index in (("shift-based, all goals", 3), ("shift-based, goalie in net", 5),
-                            ("situation code, all goals", 6), ("situation code, goalie in net", 7)):
+        print(
+            f"\n{label}: {len(part)} team-games; total ours {sum(r[3] for r in part)} "
+            f"(with a goalie in net {sum(r[5] for r in part)}), by situation code {sum(r[6] for r in part)} "
+            f"(with a goalie in net {sum(r[7] for r in part)}), boxscore {sum(r[4] for r in part)}"
+        )
+        for name, index in (
+            ("shift-based, all goals", 3),
+            ("shift-based, goalie in net", 5),
+            ("situation code, all goals", 6),
+            ("situation code, goalie in net", 7),
+        ):
             bad = [r for r in part if r[index] != r[4]]
-            print(f"  {name}: {len(part) - len(bad)} team-games agree; higher in "
-                  f"{sum(1 for r in bad if r[index] > r[4])}, lower in {sum(1 for r in bad if r[index] < r[4])}")
+            print(
+                f"  {name}: {len(part) - len(bad)} team-games agree; higher in "
+                f"{sum(1 for r in bad if r[index] > r[4])}, lower in {sum(1 for r in bad if r[index] < r[4])}"
+            )
         for name, index in (("shift-based, goalie in net", 5), ("situation code, goalie in net", 7)):
             bad = [r for r in part if r[index] != r[4]]
             if bad:

@@ -48,8 +48,14 @@ def main():
         "insert into ref values (?, ?, ?, ?, ?, ?, ?, ?)",
         [
             (
-                r["playerId"], r["skaterFullName"], r["gamesPlayed"], r["shifts"],
-                r["timeOnIce"], r["evTimeOnIce"], r["ppTimeOnIce"], r["shTimeOnIce"],
+                r["playerId"],
+                r["skaterFullName"],
+                r["gamesPlayed"],
+                r["shifts"],
+                r["timeOnIce"],
+                r["evTimeOnIce"],
+                r["ppTimeOnIce"],
+                r["shTimeOnIce"],
             )
             for r in body["data"]
         ],
@@ -78,9 +84,7 @@ def main():
         """
     )
 
-    in_ref, matched = con.execute(
-        "select (select count(*) from ref), (select count(*) from cmp)"
-    ).fetchone()
+    in_ref, matched = con.execute("select (select count(*) from ref), (select count(*) from cmp)").fetchone()
     print(f"Season {args.season}: {in_ref} skaters in the NHL's totals, {matched} found in our shifts\n")
 
     print("Total time on ice, ours minus the NHL's")

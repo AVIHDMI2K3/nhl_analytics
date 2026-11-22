@@ -9,13 +9,36 @@ sys.path.insert(0, str(ROOT / "src" / "nhl_pipeline" / "transform"))
 import line_display as ld  # noqa: E402
 
 INFO = {
-    (1, 7): ("Brad Marchand", "L"), (2, 7): ("Charlie Coyle", "C"), (3, 7): ("David Pastrnak", "R"),
-    (4, 7): ("Hampus Lindholm", "D"), (5, 7): ("Brandon Carlo", "D"), (6, 7): ("Mason Lohrei", "D"),
-    (9, 7): ("Pat Maroon", "L"), (10, 7): ("Mitch Maroon", "L"),
+    (1, 7): ("Brad Marchand", "L"),
+    (2, 7): ("Charlie Coyle", "C"),
+    (3, 7): ("David Pastrnak", "R"),
+    (4, 7): ("Hampus Lindholm", "D"),
+    (5, 7): ("Brandon Carlo", "D"),
+    (6, 7): ("Mason Lohrei", "D"),
+    (9, 7): ("Pat Maroon", "L"),
+    (10, 7): ("Mitch Maroon", "L"),
 }
-UNIT = {"cf": 10, "ca": 5, "ff": 8, "fa": 4, "sf": 6, "sa": 3, "gf": 1, "ga": 0, "cf_pct": 66.7, "ff_pct": 66.7,
-        "sf_pct": 66.7, "gf_pct": 100.0, "sh_pct": 16.7, "sv_pct": 100.0, "pdo": 116.7, "cf_per_60": 12.0,
-        "ca_per_60": 6.0, "gf_per_60": 1.2, "ga_per_60": 0.0}
+UNIT = {
+    "cf": 10,
+    "ca": 5,
+    "ff": 8,
+    "fa": 4,
+    "sf": 6,
+    "sa": 3,
+    "gf": 1,
+    "ga": 0,
+    "cf_pct": 66.7,
+    "ff_pct": 66.7,
+    "sf_pct": 66.7,
+    "gf_pct": 100.0,
+    "sh_pct": 16.7,
+    "sv_pct": 100.0,
+    "pdo": 116.7,
+    "cf_per_60": 12.0,
+    "ca_per_60": 6.0,
+    "gf_per_60": 1.2,
+    "ga_per_60": 0.0,
+}
 
 
 def season_row(unit_type, ids, seconds, games=10):
@@ -50,7 +73,9 @@ def test_last_names_get_an_initial_only_when_two_players_of_the_team_share_one()
 def test_only_units_with_enough_time_are_in_the_display_table_and_the_columns_are_filled():
     rows = ld.build_unit_display(
         [season_row("line", [1, 2, 3], 3 * 3600), season_row("line", [1, 2, 9], 600), season_row("pair", [4, 5], 4000)],
-        INFO, {7: "BOS"})
+        INFO,
+        {7: "BOS"},
+    )
     assert [r["unit_id"] for r in rows] == ["BOS-line-1-2-3", "BOS-pair-4-5"]
     line = rows[0]
     assert line["label"] == "Marchand / Coyle / Pastrnak" and line["positions"] == "L-C-R"
@@ -69,13 +94,20 @@ def test_percentages_and_rates_are_rounded_for_display():
 
 def test_the_minimum_time_can_be_changed_and_units_are_sorted_by_time_together():
     rows = ld.build_unit_display(
-        [season_row("line", [1, 2, 9], 600), season_row("line", [1, 2, 3], 1800)], INFO, {7: "BOS"}, min_seconds=300)
+        [season_row("line", [1, 2, 9], 600), season_row("line", [1, 2, 3], 1800)], INFO, {7: "BOS"}, min_seconds=300
+    )
     assert [r["minutes"] for r in rows] == [30.0, 10.0]
 
 
 def test_zone_starts_are_added_when_given_and_zero_when_a_unit_has_no_faceoffs():
     zones = {(7, "line", (1, 2, 3)): {"oz": 6, "dz": 4, "nz": 3}}
     rows = ld.build_unit_display(
-        [season_row("line", [3, 2, 1], 3600), season_row("pair", [4, 5], 3600)], INFO, {7: "BOS"}, zone_starts=zones)
-    assert (rows[0]["oz_starts"], rows[0]["dz_starts"], rows[0]["nz_starts"], rows[0]["oz_start_pct"]) == (6, 4, 3, 60.0)
+        [season_row("line", [3, 2, 1], 3600), season_row("pair", [4, 5], 3600)], INFO, {7: "BOS"}, zone_starts=zones
+    )
+    assert (rows[0]["oz_starts"], rows[0]["dz_starts"], rows[0]["nz_starts"], rows[0]["oz_start_pct"]) == (
+        6,
+        4,
+        3,
+        60.0,
+    )
     assert (rows[1]["oz_starts"], rows[1]["oz_start_pct"]) == (0, None)

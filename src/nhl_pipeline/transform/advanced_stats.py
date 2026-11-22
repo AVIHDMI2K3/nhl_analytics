@@ -109,8 +109,16 @@ def add_rates(row):
     return row
 
 
-def build_advanced_display(totals, games, season_rows, names, team_abbrevs,
-                           situations=SITUATIONS, columns=COUNT_COLUMNS, add_rates_to=add_rates):
+def build_advanced_display(
+    totals,
+    games,
+    season_rows,
+    names,
+    team_abbrevs,
+    situations=SITUATIONS,
+    columns=COUNT_COLUMNS,
+    add_rates_to=add_rates,
+):
     """Fan-facing rows: one per player, team (or combined) and situation.
 
     `situations`, `columns` and `add_rates_to` default to the advanced on-ice ones; special_teams.py
@@ -137,9 +145,16 @@ def build_advanced_display(totals, games, season_rows, names, team_abbrevs,
                 if counts is None:
                     continue
                 shown = {
-                    "player_id": player_id, "name": name, "position": row["position"], "kind": "team",
-                    "team_id": row["team_id"], "team": abbrev, "teams": ", ".join(abbrevs), "situation": situation,
-                    "games_played": row["games_played"], "games_included": games[(player_id, row["team_id"])],
+                    "player_id": player_id,
+                    "name": name,
+                    "position": row["position"],
+                    "kind": "team",
+                    "team_id": row["team_id"],
+                    "team": abbrev,
+                    "teams": ", ".join(abbrevs),
+                    "situation": situation,
+                    "games_played": row["games_played"],
+                    "games_included": games[(player_id, row["team_id"])],
                 }
                 shown.update({column: counts[column] for column in columns})
                 team_rows.append(add_rates_to(shown))
@@ -149,12 +164,18 @@ def build_advanced_display(totals, games, season_rows, names, team_abbrevs,
                 if not parts:
                     continue
                 combined = {
-                    "player_id": player_id, "name": name,
+                    "player_id": player_id,
+                    "name": name,
                     "position": max(teams, key=lambda r: r["games_played"])["position"],
-                    "kind": "total", "team_id": None, "team": "TOT", "teams": ", ".join(abbrevs),
+                    "kind": "total",
+                    "team_id": None,
+                    "team": "TOT",
+                    "teams": ", ".join(abbrevs),
                     "situation": situation,
                     "games_played": sum(r["games_played"] for r in teams),
-                    "games_included": sum(games[(player_id, r["team_id"])] for r in teams if (player_id, r["team_id"]) in games),
+                    "games_included": sum(
+                        games[(player_id, r["team_id"])] for r in teams if (player_id, r["team_id"]) in games
+                    ),
                 }
                 combined.update({column: sum(r[column] for r in parts) for column in columns})
                 out.append(add_rates_to(combined))
@@ -195,8 +216,11 @@ def build_team_advanced_display(totals, games, games_played, team_abbrevs):
             if counts is None:
                 continue
             row = {
-                "team_id": team_id, "team": team_abbrevs.get(team_id, str(team_id)), "situation": situation,
-                "games_played": games_played.get(team_id), "games_included": games[team_id],
+                "team_id": team_id,
+                "team": team_abbrevs.get(team_id, str(team_id)),
+                "situation": situation,
+                "games_played": games_played.get(team_id),
+                "games_included": games[team_id],
             }
             row.update({column: counts[column] for column in ON_ICE})
             out.append(add_team_rates(row))

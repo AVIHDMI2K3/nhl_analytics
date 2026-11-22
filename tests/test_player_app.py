@@ -6,9 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src" / "nhl_pipeline" / "transform"))
 
-import pytest  # noqa: E402
-
 import player_app as pa_  # noqa: E402
+import pytest  # noqa: E402
 
 
 def ident(player_id, kind="team", team_id=10, season=2025):
@@ -16,8 +15,16 @@ def ident(player_id, kind="team", team_id=10, season=2025):
 
 
 def display(player_id, points=50, name=None, **kw):
-    return {**ident(player_id, **kw), "name": name or f"P{player_id}", "team": "TOR", "teams": "TOR",
-            "games_played": 80, "goals": 20, "assists": 30, "points": points}
+    return {
+        **ident(player_id, **kw),
+        "name": name or f"P{player_id}",
+        "team": "TOR",
+        "teams": "TOR",
+        "games_played": 80,
+        "goals": 20,
+        "assists": 30,
+        "points": points,
+    }
 
 
 def advanced(player_id, situation="5v5", seconds=3600, cf_pct=54.94, **kw):
@@ -37,8 +44,7 @@ def special(player_id, situation, seconds=600, **kw):
 
 
 def faceoffs(player_id, situation="all", **kw):
-    return {**ident(player_id, **kw), "situation": situation, "faceoffs": 100, "faceoff_wins": 55,
-            "faceoff_pct": 55.0}
+    return {**ident(player_id, **kw), "situation": situation, "faceoffs": 100, "faceoff_wins": 55, "faceoff_pct": 55.0}
 
 
 def test_joins_the_right_situation_row_from_each_table():
@@ -46,7 +52,8 @@ def test_joins_the_right_situation_row_from_each_table():
         [display(1)],
         [advanced(1, "all", cf_pct=99.0), advanced(1, "5v5", cf_pct=54.94)],
         [special(1, "pp", seconds=300), special(1, "sh", seconds=120), special(1, "ev", seconds=9999)],
-        [faceoffs(1, "5v5"), faceoffs(1, "all")])
+        [faceoffs(1, "5v5"), faceoffs(1, "all")],
+    )
     assert len(rows) == 1
     r = rows[0]
     assert r["cf_pct_5v5"] == pytest.approx(54.9)
@@ -71,7 +78,9 @@ def test_team_row_and_total_row_do_not_mix():
     rows = pa_.build_player_rows(
         [display(1, kind="team", team_id=10), display(1, kind="total", team_id=None, points=70)],
         [advanced(1, kind="team", team_id=10, cf_pct=50.0), advanced(1, kind="total", team_id=None, cf_pct=60.0)],
-        [], [])
+        [],
+        [],
+    )
     by_kind = {r["kind"]: r for r in rows}
     assert by_kind["team"]["cf_pct_5v5"] == pytest.approx(50.0)
     assert by_kind["total"]["cf_pct_5v5"] == pytest.approx(60.0)

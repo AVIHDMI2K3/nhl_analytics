@@ -18,19 +18,31 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from percentiles import DEFAULT_CHART, GROUPS, STATS_BY_KEY, build_percentile_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 DEFAULT_MIN_MINUTES = 600
-SCHEMA = pa.schema([
-    ("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position", pa.string()),
-    ("position_group", pa.string()), ("team", pa.string()), ("teams", pa.string()), ("minutes_5v5", pa.float64()),
-    ("in_pool", pa.bool_()), ("stat", pa.string()), ("label", pa.string()), ("value", pa.float64()),
-    ("percentile", pa.float64()), ("pool_size", pa.int64()), ("higher_is_better", pa.bool_()),
-    ("in_default_chart", pa.bool_()),
-])
+SCHEMA = pa.schema(
+    [
+        ("season", pa.int64()),
+        ("player_id", pa.int64()),
+        ("name", pa.string()),
+        ("position", pa.string()),
+        ("position_group", pa.string()),
+        ("team", pa.string()),
+        ("teams", pa.string()),
+        ("minutes_5v5", pa.float64()),
+        ("in_pool", pa.bool_()),
+        ("stat", pa.string()),
+        ("label", pa.string()),
+        ("value", pa.float64()),
+        ("percentile", pa.float64()),
+        ("pool_size", pa.int64()),
+        ("higher_is_better", pa.bool_()),
+        ("in_default_chart", pa.bool_()),
+    ]
+)
 SAMPLE_PLAYERS = ("McDavid", "Makar", "Matthews", "Hedman", "Hughes")
 
 
@@ -55,8 +67,10 @@ def main():
         pool = sum(1 for r in members if r["in_pool"])
         print(f"  {group}: {len(members)} skaters, {pool} in the pool (at least {args.min_minutes:g} min of 5v5)")
 
-    for r in sorted((r for r in players.values() if any(s in r["name"] for s in SAMPLE_PLAYERS) and r["in_pool"]),
-                    key=lambda r: r["name"]):
+    for r in sorted(
+        (r for r in players.values() if any(s in r["name"] for s in SAMPLE_PLAYERS) and r["in_pool"]),
+        key=lambda r: r["name"],
+    ):
         chart = [x for x in rows if x["player_id"] == r["player_id"] and x["in_default_chart"]]
         print(f"\n  {r['name']} ({r['team']}, {r['position']}, {r['minutes_5v5']:.0f} min)")
         for key in DEFAULT_CHART[r["position_group"]]:

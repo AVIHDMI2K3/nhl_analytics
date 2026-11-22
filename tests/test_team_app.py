@@ -7,15 +7,21 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src" / "nhl_pipeline" / "transform"))
 
 import pytest  # noqa: E402
-
 import team_app as ta  # noqa: E402
 
 
 def basic(team_id, team, points, goal_diff=0, season=2025):
     row = {"season": season, "team_id": team_id, "team": team}
     row.update({c: 0 for c in ta.BASIC_COLUMNS})
-    row.update({"points": points, "goal_diff": goal_diff, "points_pct": 0.6097560975609756,
-                "shots_for_per_game": 27.024390243902438, "shots_against_per_game": 29.670731707317074})
+    row.update(
+        {
+            "points": points,
+            "goal_diff": goal_diff,
+            "points_pct": 0.6097560975609756,
+            "shots_for_per_game": 27.024390243902438,
+            "shots_against_per_game": 29.670731707317074,
+        }
+    )
     return row
 
 
@@ -34,8 +40,9 @@ def special(team_id, pp_pct=23.305, pk_pct=77.06, season=2025):
 
 
 def test_joins_the_three_tables_and_uses_only_the_5v5_row():
-    rows = ta.build_team_rows([basic(6, "BOS", 100)],
-                              [advanced(6, "all", cf_pct=60.0), advanced(6, "5v5", cf_pct=48.93)], [special(6)])
+    rows = ta.build_team_rows(
+        [basic(6, "BOS", 100)], [advanced(6, "all", cf_pct=60.0), advanced(6, "5v5", cf_pct=48.93)], [special(6)]
+    )
     assert len(rows) == 1
     assert rows[0]["cf_pct_5v5"] == pytest.approx(48.9)
     assert rows[0]["pp_pct"] == pytest.approx(23.3)
@@ -56,8 +63,9 @@ def test_every_5v5_column_has_the_suffix():
 
 
 def test_sorted_by_points_then_goal_difference():
-    rows = ta.build_team_rows([basic(1, "AAA", 90, goal_diff=5), basic(2, "BBB", 100), basic(3, "CCC", 90, goal_diff=20)],
-                              [], [])
+    rows = ta.build_team_rows(
+        [basic(1, "AAA", 90, goal_diff=5), basic(2, "BBB", 100), basic(3, "CCC", 90, goal_diff=20)], [], []
+    )
     assert [r["team"] for r in rows] == ["BBB", "CCC", "AAA"]
 
 

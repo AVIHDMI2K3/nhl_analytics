@@ -14,7 +14,7 @@ Season rows (season_unit_rows) sum the games and add the percentages and per-60 
 
 from collections import Counter, defaultdict
 
-from base_tables import KINDS, KIND_BY_ATTEMPT, code_states, credited_stints
+from base_tables import KIND_BY_ATTEMPT, KINDS, code_states, credited_stints
 from lines import units_on_ice
 from stints import SIDES, StintIndex, other_side, side_state
 
@@ -117,10 +117,25 @@ def season_unit_rows(game_rows):
         sh_pct = 100 * gf / sf if sf else None
         sv_pct = 100 * (1 - ga / sa) if sa else None
         row = {
-            "team_id": team_id, "unit_type": unit_type, "player_ids": list(player_ids), "games": c["games"],
-            "seconds": c["seconds"], "cf": cf, "ca": ca, "ff": ff, "fa": fa, "sf": sf, "sa": sa, "gf": gf, "ga": ga,
-            "cf_pct": percent(cf, ca), "ff_pct": percent(ff, fa), "sf_pct": percent(sf, sa), "gf_pct": percent(gf, ga),
-            "sh_pct": sh_pct, "sv_pct": sv_pct,
+            "team_id": team_id,
+            "unit_type": unit_type,
+            "player_ids": list(player_ids),
+            "games": c["games"],
+            "seconds": c["seconds"],
+            "cf": cf,
+            "ca": ca,
+            "ff": ff,
+            "fa": fa,
+            "sf": sf,
+            "sa": sa,
+            "gf": gf,
+            "ga": ga,
+            "cf_pct": percent(cf, ca),
+            "ff_pct": percent(ff, fa),
+            "sf_pct": percent(sf, sa),
+            "gf_pct": percent(gf, ga),
+            "sh_pct": sh_pct,
+            "sv_pct": sv_pct,
             "pdo": sh_pct + sv_pct if sh_pct is not None and sv_pct is not None else None,
         }
         for name in ("cf", "ca", "gf", "ga"):
@@ -140,8 +155,11 @@ def describe_units(season_rows, thresholds=(30, 60, 100)):
             continue
         teams = len({r["team_id"] for r in rows})
         summary[unit_type] = {
-            "units": len(minutes), "median": minutes[len(minutes) // 2], "mean": sum(minutes) / len(minutes),
-            "p90": minutes[int(0.9 * (len(minutes) - 1))], "max": minutes[-1],
+            "units": len(minutes),
+            "median": minutes[len(minutes) // 2],
+            "mean": sum(minutes) / len(minutes),
+            "p90": minutes[int(0.9 * (len(minutes) - 1))],
+            "max": minutes[-1],
             "at_least": {t: sum(m >= t for m in minutes) for t in thresholds},
             "per_team": {t: sum(m >= t for m in minutes) / teams for t in thresholds},
         }

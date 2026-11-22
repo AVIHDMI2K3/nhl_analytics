@@ -102,8 +102,14 @@ def main():
     goals = defaultdict(list)
     for game_id, period, seconds, owner, code, home_ids, away_ids in goal_rows:
         goals[game_id].append(
-            {"period": period, "seconds": seconds, "owner": owner, "code": code,
-             "home_skaters": home_ids, "away_skaters": away_ids}
+            {
+                "period": period,
+                "seconds": seconds,
+                "owner": owner,
+                "code": code,
+                "home_skaters": home_ids,
+                "away_skaters": away_ids,
+            }
         )
 
     print(f"{len(diffs)} games differ from the boxscore")

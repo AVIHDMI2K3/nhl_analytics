@@ -10,8 +10,12 @@ import diagnose_skater_minutes as dm  # noqa: E402
 
 
 def test_a_traded_player_counts_once_with_his_combined_row():
-    rows = [{"player_id": 1, "kind": "team", "seconds": 10}, {"player_id": 1, "kind": "total", "seconds": 30},
-            {"player_id": 1, "kind": "team", "seconds": 20}, {"player_id": 2, "kind": "team", "seconds": 5}]
+    rows = [
+        {"player_id": 1, "kind": "team", "seconds": 10},
+        {"player_id": 1, "kind": "total", "seconds": 30},
+        {"player_id": 1, "kind": "team", "seconds": 20},
+        {"player_id": 2, "kind": "team", "seconds": 5},
+    ]
     chosen = {r["player_id"]: r["seconds"] for r in dm.one_row_per_player(rows)}
     assert chosen == {1: 30, 2: 5}
 

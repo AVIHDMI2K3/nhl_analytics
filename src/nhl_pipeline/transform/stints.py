@@ -62,8 +62,14 @@ def build_stints(game, shifts):
 
 def lineup(game, period, start, end, active_shifts):
     stint = {
-        "game_id": game["game_id"], "period": period, "start": start, "end": end,
-        "home_skater_ids": [], "away_skater_ids": [], "home_goalie_ids": [], "away_goalie_ids": [],
+        "game_id": game["game_id"],
+        "period": period,
+        "start": start,
+        "end": end,
+        "home_skater_ids": [],
+        "away_skater_ids": [],
+        "home_goalie_ids": [],
+        "away_goalie_ids": [],
     }
     for shift in active_shifts:
         if shift["team_id"] == game["home_team_id"]:
@@ -80,10 +86,7 @@ def lineup(game, period, start, end, active_shifts):
 
 
 def same_lineup(a, b):
-    return all(
-        a[key] == b[key]
-        for key in ("home_skater_ids", "away_skater_ids", "home_goalie_ids", "away_goalie_ids")
-    )
+    return all(a[key] == b[key] for key in ("home_skater_ids", "away_skater_ids", "home_goalie_ids", "away_goalie_ids"))
 
 
 def strength_label(real_for, real_against):
@@ -139,8 +142,7 @@ class CodeSteps:
         usable = [
             (e["game_seconds"], e["sort_order"] if e["sort_order"] is not None else 10**9, e["situation_code"])
             for e in events
-            if e["game_seconds"] is not None and e["situation_code"] is not None
-            and e.get("period_type") != "SO"
+            if e["game_seconds"] is not None and e["situation_code"] is not None and e.get("period_type") != "SO"
         ]
         usable.sort(key=lambda row: (row[0], row[1]))
         self.times = [row[0] for row in usable]
@@ -189,7 +191,8 @@ def smoothed_label_for(stints, label_for, max_seconds):
                 before, after = stints[i - 1], stints[i + 1]
                 if (
                     stint["end"] - stint["start"] <= max_seconds
-                    and before["end"] == stint["start"] and stint["end"] == after["start"]
+                    and before["end"] == stint["start"]
+                    and stint["end"] == after["start"]
                     and before["period"] == stint["period"] == after["period"]
                     and base[i - 1] == base[i + 1] != label
                 ):
@@ -211,6 +214,7 @@ def stint_rows(game, stints, smooth_seconds=SMOOTH_SECONDS):
     A smoothed stint also takes the real skater counts of the stint before it, so the
     counts (and the state such as 5v5 built from them) agree with the strength.
     """
+
     def base(stint, side):
         return strength_from_shifts(stint, side, adjust_goalie=True)
 

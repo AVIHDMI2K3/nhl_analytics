@@ -91,15 +91,12 @@ def main():
     games_columns = read_columns(staging / "games.parquet", ["game_id", "home_team_id", "away_team_id"])
     games = {
         g: {"game_id": g, "home_team_id": h, "away_team_id": a}
-        for g, h, a in zip(
-            games_columns["game_id"], games_columns["home_team_id"], games_columns["away_team_id"]
-        )
+        for g, h, a in zip(games_columns["game_id"], games_columns["home_team_id"], games_columns["away_team_id"])
     }
     shifts = group_rows(
         read_columns(
             INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet",
-            ["game_id", "player_id", "team_id", "period", "start_game_seconds",
-             "end_game_seconds", "is_goalie"],
+            ["game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds", "is_goalie"],
         )
     )
     reference_path = RAW_ROOT / f"season={args.season}" / "reference" / "skater_timeonice.json.gz"
@@ -124,15 +121,17 @@ def main():
                             special[limit] += player_seconds
 
     print(f"Season {args.season}: {len(reference)} skaters in the NHL's totals")
-    print("NHL totals (seconds): " + ", ".join(
-        f"{s} {sum(r[REFERENCE_FIELDS[s]] for r in reference.values())}" for s in STRENGTHS
-    ))
+    print(
+        "NHL totals (seconds): "
+        + ", ".join(f"{s} {sum(r[REFERENCE_FIELDS[s]] for r in reference.values())}" for s in STRENGTHS)
+    )
     print("\nPlayer-seconds at pp or sh (shift counts, goalie adjusted) that come from stints of at most:")
     for limit in BLIP_SECONDS:
         print(f"  {limit:>2d} s: {special[limit]} of {special['all']}")
 
     matching = {
-        p for p, ref in reference.items()
+        p
+        for p, ref in reference.items()
         if abs(sum(totals["shifts, goalie adj"].get((p, s), 0) for s in STRENGTHS) - ref["timeOnIce"]) <= 2
     }
     order = ["exact", "<=2 s", "<=10 s", "<=60 s", ">60 s"]
@@ -151,8 +150,7 @@ def main():
                     nhl_total += ref
                     counts[bucket(ours - ref)] += 1
                 print(
-                    f"{strength:9s}" + "".join(f"{counts[b]:>9d}" for b in order)
-                    + f"{ours_total:>12d}{nhl_total:>12d}"
+                    f"{strength:9s}" + "".join(f"{counts[b]:>9d}" for b in order) + f"{ours_total:>12d}{nhl_total:>12d}"
                 )
 
 

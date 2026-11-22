@@ -21,7 +21,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from stints import build_stints, stint_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -46,7 +45,13 @@ SCHEMA = [
     ("away_strength", "string"),
 ]
 SHIFT_COLUMNS = [
-    "game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds", "is_goalie",
+    "game_id",
+    "player_id",
+    "team_id",
+    "period",
+    "start_game_seconds",
+    "end_game_seconds",
+    "is_goalie",
 ]
 
 
@@ -103,9 +108,10 @@ def main():
     total = sum(seconds.values())
     print(f"Stints written to {out}: {len(rows)} in {len(by_game)} games")
     print(f"Games without shift data (no stints): {len(games) - len(by_game)}")
-    print("Team-seconds by strength: " + ", ".join(
-        f"{s} {seconds[s]} ({100 * seconds[s] / total:.1f}%)" for s in ("ev", "pp", "sh")
-    ))
+    print(
+        "Team-seconds by strength: "
+        + ", ".join(f"{s} {seconds[s]} ({100 * seconds[s] / total:.1f}%)" for s in ("ev", "pp", "sh"))
+    )
 
 
 if __name__ == "__main__":

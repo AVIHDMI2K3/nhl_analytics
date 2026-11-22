@@ -13,19 +13,34 @@ scoring, physical play or usage:
 Percentiles are ranks within each season, so entries from different seasons are comparable as "how good in his own
 year" (a stat that league-wide moved up or down between seasons does not matter), but a rank cannot show how far apart
 two players really are. `nearest` returns for each entry its closest entries in the same season and in all seasons.
-A player's own other seasons are never matches (a player is always most like himself), so the list is always other players.
+A player's own other seasons are never matches (a player is always most like himself), so the list is
+always other players.
 """
 
 import heapq
 
-from percentiles import STATS_BY_KEY
-
 CATEGORIES = {
-    "scoring": ["goals_per_60", "assists_per_60", "points_per_60", "shots_per_60", "shooting_pct", "icf_per_60",
-                "isf_per_60", "ig_per_60"],
+    "scoring": [
+        "goals_per_60",
+        "assists_per_60",
+        "points_per_60",
+        "shots_per_60",
+        "shooting_pct",
+        "icf_per_60",
+        "isf_per_60",
+        "ig_per_60",
+    ],
     "shot_share": ["cf_pct", "ff_pct", "sf_pct", "gf_pct", "cf_pct_rel", "ff_pct_rel", "sf_pct_rel", "gf_pct_rel"],
-    "shot_volume": ["cf_per_60", "ca_per_60", "ff_per_60", "fa_per_60", "sf_per_60", "sa_per_60", "gf_per_60",
-                    "ga_per_60"],
+    "shot_volume": [
+        "cf_per_60",
+        "ca_per_60",
+        "ff_per_60",
+        "fa_per_60",
+        "sf_per_60",
+        "sa_per_60",
+        "gf_per_60",
+        "ga_per_60",
+    ],
     "physical": ["hits_per_60", "blocks_per_60", "takeaways_per_60", "giveaways_per_60"],
     "usage": ["toi_per_game"],
 }
@@ -40,10 +55,19 @@ def build_entries(percentile_rows):
         if not row["in_pool"]:
             continue
         key = (row["season"], row["player_id"])
-        entry = entries.setdefault(key, {
-            "key": key, "season": row["season"], "player_id": row["player_id"], "name": row["name"],
-            "team": row["team"], "position": row["position"], "group": row["position_group"], "percentiles": {},
-        })
+        entry = entries.setdefault(
+            key,
+            {
+                "key": key,
+                "season": row["season"],
+                "player_id": row["player_id"],
+                "name": row["name"],
+                "team": row["team"],
+                "position": row["position"],
+                "group": row["position_group"],
+                "percentiles": {},
+            },
+        )
         if row["percentile"] is not None:
             entry["percentiles"][row["stat"]] = row["percentile"]
     return [entries[key] for key in sorted(entries)]
@@ -88,10 +112,17 @@ def nearest(entries, top_n=15, categories=CATEGORIES):
                 best = heapq.nlargest(top_n, pool, key=lambda s: (s[0], -s[1]["season"], -s[1]["player_id"]))
                 for rank, (score, other, gaps) in enumerate(best, start=1):
                     row = {
-                        "season": entry["season"], "player_id": entry["player_id"], "name": entry["name"],
-                        "position_group": entry["group"], "mode": mode, "rank": rank,
-                        "other_season": other["season"], "other_player_id": other["player_id"],
-                        "other_name": other["name"], "other_team": other["team"], "other_position": other["position"],
+                        "season": entry["season"],
+                        "player_id": entry["player_id"],
+                        "name": entry["name"],
+                        "position_group": entry["group"],
+                        "mode": mode,
+                        "rank": rank,
+                        "other_season": other["season"],
+                        "other_player_id": other["player_id"],
+                        "other_name": other["name"],
+                        "other_team": other["team"],
+                        "other_position": other["position"],
                         "similarity": score,
                     }
                     row.update({f"gap_{category}": gaps[category] for category in categories})

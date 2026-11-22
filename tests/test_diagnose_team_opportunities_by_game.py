@@ -9,8 +9,15 @@ import diagnose_team_opportunities_by_game as d  # noqa: E402
 
 
 def pen(team, second, minutes=2, game=1, code="MIN", period="REG"):
-    return {"game_id": game, "game_seconds": second, "event_owner_team_id": team, "penalty_minutes": minutes,
-            "opponent_team_id": 2 if team == 1 else 1, "penalty_type_code": code, "period_type": period}
+    return {
+        "game_id": game,
+        "game_seconds": second,
+        "event_owner_team_id": team,
+        "penalty_minutes": minutes,
+        "opponent_team_id": 2 if team == 1 else 1,
+        "penalty_type_code": code,
+        "period_type": period,
+    }
 
 
 def test_counts_are_kept_per_game_and_team():
@@ -27,11 +34,15 @@ def test_compare_counts_exact_team_games_and_the_differences():
 
 def test_features_name_what_is_in_the_game_for_a_team():
     rows = [pen(2, 100, 4), pen(2, 100, 2, code="BEN"), pen(1, 100, 5, code="MAJ"), pen(2, 150, 10, code="MIS")]
-    assert d.game_features(rows, 1) >= {"opponent double minor (4 min)", "opponent bench minor", "own major",
-                                        "two opponent penalties at the same second",
-                                        "both teams penalized at the same second",
-                                        "opponent penalties within 2 minutes of each other",
-                                        "misconduct or penalty shot in the game"}
+    assert d.game_features(rows, 1) >= {
+        "opponent double minor (4 min)",
+        "opponent bench minor",
+        "own major",
+        "two opponent penalties at the same second",
+        "both teams penalized at the same second",
+        "opponent penalties within 2 minutes of each other",
+        "misconduct or penalty shot in the game",
+    }
     assert d.game_features([pen(2, 100)], 1) == set()
 
 

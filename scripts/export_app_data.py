@@ -37,8 +37,12 @@ def plan_copies(seasons, metrics_root=METRICS_ROOT, app_data_root=APP_DATA_ROOT)
     pairs = []
     for season in seasons:
         for table in SEASON_TABLES:
-            pairs.append((metrics_root / f"season={season}" / f"{table}.parquet",
-                          app_data_root / f"season={season}" / f"{table}.parquet"))
+            pairs.append(
+                (
+                    metrics_root / f"season={season}" / f"{table}.parquet",
+                    app_data_root / f"season={season}" / f"{table}.parquet",
+                )
+            )
     for table in ALL_SEASON_TABLES:
         pairs.append((metrics_root / f"{table}.parquet", app_data_root / f"{table}.parquet"))
     return pairs

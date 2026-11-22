@@ -31,15 +31,19 @@ def test_a_report_is_parsed_into_players_and_shifts_in_game_seconds():
     parsed = s.parse_report(HTML)
     assert parsed["team"] == "NEW YORK ISLANDERS" and [p["number"] for p in parsed["players"]] == [3, 91]
     first = parsed["players"][0]["shifts"]
-    assert first == [{"shift_number": 1, "period": 1, "start": 0, "end": 25},
-                     {"shift_number": 2, "period": 3, "start": 2400 + 609, "end": 2400 + 654},
-                     {"shift_number": 3, "period": 4, "start": 3660, "end": 3690}]
+    assert first == [
+        {"shift_number": 1, "period": 1, "start": 0, "end": 25},
+        {"shift_number": 2, "period": 3, "start": 2400 + 609, "end": 2400 + 654},
+        {"shift_number": 3, "period": 4, "start": 3660, "end": 3690},
+    ]
     assert parsed["players"][1]["shifts"] == [{"shift_number": 1, "period": 2, "start": 1320, "end": 1380}]
 
 
 def test_players_are_matched_to_ids_by_jersey_number_and_unmatched_ones_are_reported():
     rows, unmatched = s.shift_rows(7, 2, s.parse_report(HTML), {3: 8470001})
-    assert len(rows) == 3 and rows[0]["player_id"] == 8470001 and rows[0]["team_id"] == 2 and rows[0]["shift_id"] is None
+    assert (
+        len(rows) == 3 and rows[0]["player_id"] == 8470001 and rows[0]["team_id"] == 2 and rows[0]["shift_id"] is None
+    )
     assert rows[0]["start_game_seconds"] == 0 and unmatched == [(91, "TAVARES, JOHN")]
 
 
@@ -54,6 +58,11 @@ def test_shifts_are_checked_against_the_boxscore_time_on_ice():
 def test_a_shift_row_becomes_a_staging_row():
     rows, _ = s.shift_rows(7, 2, s.parse_report(HTML), {3: 100})
     row = s.to_staging_row(rows[1], "NYI", 2024)  # period 3, 10:09 to 10:54
-    assert row["first_name"] == "Adam" and row["last_name"] == "Pelech" and row["team"] == "NYI" and row["shift_id"] is None
+    assert (
+        row["first_name"] == "Adam"
+        and row["last_name"] == "Pelech"
+        and row["team"] == "NYI"
+        and row["shift_id"] is None
+    )
     assert (row["start_seconds_in_period"], row["end_seconds_in_period"], row["duration_seconds"]) == (609, 654, 45)
     assert (row["start_game_seconds"], row["end_game_seconds"], row["season"]) == (3009, 3054, 2024)

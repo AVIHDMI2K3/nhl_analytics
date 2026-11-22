@@ -31,15 +31,40 @@ OUR_COLUMNS = {"CF": "cf", "CA": "ca", "FF": "ff", "FA": "fa", "SF": "sf", "SA":
 TOI_TOLERANCE_MINUTES = 0.1
 NST_ABBREVIATIONS = {"S.J": "SJS", "N.J": "NJD", "T.B": "TBL", "L.A": "LAK"}
 TEAM_NAMES = {
-    "anaheim ducks": "ANA", "arizona coyotes": "ARI", "boston bruins": "BOS", "buffalo sabres": "BUF",
-    "calgary flames": "CGY", "carolina hurricanes": "CAR", "chicago blackhawks": "CHI", "colorado avalanche": "COL",
-    "columbus blue jackets": "CBJ", "dallas stars": "DAL", "detroit red wings": "DET", "edmonton oilers": "EDM",
-    "florida panthers": "FLA", "los angeles kings": "LAK", "minnesota wild": "MIN", "montreal canadiens": "MTL",
-    "nashville predators": "NSH", "new jersey devils": "NJD", "new york islanders": "NYI", "new york rangers": "NYR",
-    "ottawa senators": "OTT", "philadelphia flyers": "PHI", "pittsburgh penguins": "PIT", "san jose sharks": "SJS",
-    "seattle kraken": "SEA", "st louis blues": "STL", "tampa bay lightning": "TBL", "toronto maple leafs": "TOR",
-    "utah hockey club": "UTA", "utah mammoth": "UTA", "vancouver canucks": "VAN", "vegas golden knights": "VGK",
-    "washington capitals": "WSH", "winnipeg jets": "WPG",
+    "anaheim ducks": "ANA",
+    "arizona coyotes": "ARI",
+    "boston bruins": "BOS",
+    "buffalo sabres": "BUF",
+    "calgary flames": "CGY",
+    "carolina hurricanes": "CAR",
+    "chicago blackhawks": "CHI",
+    "colorado avalanche": "COL",
+    "columbus blue jackets": "CBJ",
+    "dallas stars": "DAL",
+    "detroit red wings": "DET",
+    "edmonton oilers": "EDM",
+    "florida panthers": "FLA",
+    "los angeles kings": "LAK",
+    "minnesota wild": "MIN",
+    "montreal canadiens": "MTL",
+    "nashville predators": "NSH",
+    "new jersey devils": "NJD",
+    "new york islanders": "NYI",
+    "new york rangers": "NYR",
+    "ottawa senators": "OTT",
+    "philadelphia flyers": "PHI",
+    "pittsburgh penguins": "PIT",
+    "san jose sharks": "SJS",
+    "seattle kraken": "SEA",
+    "st louis blues": "STL",
+    "tampa bay lightning": "TBL",
+    "toronto maple leafs": "TOR",
+    "utah hockey club": "UTA",
+    "utah mammoth": "UTA",
+    "vancouver canucks": "VAN",
+    "vegas golden knights": "VGK",
+    "washington capitals": "WSH",
+    "winnipeg jets": "WPG",
 }
 
 
@@ -74,8 +99,14 @@ def compare_column(pairs):
     """(compared, exact, ours total, NST total, worst difference) for [(ours, nst, label)] with both present."""
     usable = [(o, n, label) for o, n, label in pairs if o is not None and n is not None]
     worst = max(usable, key=lambda p: abs(p[0] - p[1]), default=(0, 0, None))
-    return (len(usable), sum(1 for o, n, _ in usable if o == n), sum(o for o, _, _ in usable),
-            sum(n for _, n, _ in usable), worst[0] - worst[1], worst[2])
+    return (
+        len(usable),
+        sum(1 for o, n, _ in usable if o == n),
+        sum(o for o, _, _ in usable),
+        sum(n for _, n, _ in usable),
+        worst[0] - worst[1],
+        worst[2],
+    )
 
 
 def last_name(name):
@@ -93,7 +124,9 @@ def match_skaters(nst_rows, our_rows):
         by_key.setdefault((normalize_name(row["name"]), team_set(row["teams"])), []).append(row)
     matched, leftover, used = {}, [], set()
     for index, row in enumerate(nst_rows):
-        candidates = [c for c in by_key.get((normalize_name(row["Player"]), team_set(row["Team"])), []) if id(c) not in used]
+        candidates = [
+            c for c in by_key.get((normalize_name(row["Player"]), team_set(row["Team"])), []) if id(c) not in used
+        ]
         if candidates:
             matched[index] = candidates[0]
             used.add(id(candidates[0]))
@@ -102,8 +135,14 @@ def match_skaters(nst_rows, our_rows):
     unmatched = []
     for index in leftover:
         row = nst_rows[index]
-        close = [c for c in our_rows if id(c) not in used and team_set(c["teams"]) == team_set(row["Team"])
-                 and c["games_played"] == number(row["GP"]) and last_name(c["name"]) == last_name(row["Player"])]
+        close = [
+            c
+            for c in our_rows
+            if id(c) not in used
+            and team_set(c["teams"]) == team_set(row["Team"])
+            and c["games_played"] == number(row["GP"])
+            and last_name(c["name"]) == last_name(row["Player"])
+        ]
         if len(close) == 1:
             matched[index] = close[0]
             used.add(id(close[0]))
@@ -120,14 +159,21 @@ def within(pairs, tolerance):
 def report(pairs_by_stat, show):
     for stat, pairs in pairs_by_stat.items():
         compared, exact, mine, theirs, worst, who = compare_column(pairs)
-        print(f"  {stat:4s} exact {exact:4d}/{compared:<4d} within 2: {within(pairs, 2):4d}  within 5: {within(pairs, 5):4d}  "
-              f"ours {mine:9.1f} NST {theirs:9.1f}  worst {worst:+.1f} ({who})")
+        print(
+            f"  {stat:4s} exact {exact:4d}/{compared:<4d} within 2: {within(pairs, 2):4d}  within 5: {within(pairs, 5):4d}  "
+            f"ours {mine:9.1f} NST {theirs:9.1f}  worst {worst:+.1f} ({who})"
+        )
     if show:
         for stat in ("CF", "GF"):
-            ranked = sorted((p for p in pairs_by_stat[stat] if p[0] is not None and p[1] is not None and p[0] != p[1]),
-                            key=lambda p: -abs(p[0] - p[1]))[:show]
+            ranked = sorted(
+                (p for p in pairs_by_stat[stat] if p[0] is not None and p[1] is not None and p[0] != p[1]),
+                key=lambda p: -abs(p[0] - p[1]),
+            )[:show]
             if ranked:
-                print(f"  largest {stat} differences: " + "; ".join(f"{l} ours {o:g} NST {n:g}" for o, n, l in ranked))
+                print(
+                    f"  largest {stat} differences: "
+                    + "; ".join(f"{label} ours {o:g} NST {n:g}" for o, n, label in ranked)
+                )
 
 
 def skater_pairs(nst_rows, matched):
@@ -146,8 +192,10 @@ def toi_report(pairs):
     compared = [(o, n, label) for o, n, label in pairs["TOI"] if o is not None and n is not None]
     within = sum(1 for o, n, _ in compared if abs(o - n) <= TOI_TOLERANCE_MINUTES)
     worst = max(compared, key=lambda p: abs(p[0] - p[1]), default=(0, 0, None))
-    print(f"  TOI  within {TOI_TOLERANCE_MINUTES} min {within:4d}/{len(compared):<4d} "
-          f"ours {sum(o for o, _, _ in compared):9.1f} NST {sum(n for _, n, _ in compared):9.1f}  worst {worst[0] - worst[1]:+.1f} ({worst[2]})")
+    print(
+        f"  TOI  within {TOI_TOLERANCE_MINUTES} min {within:4d}/{len(compared):<4d} "
+        f"ours {sum(o for o, _, _ in compared):9.1f} NST {sum(n for _, n, _ in compared):9.1f}  worst {worst[0] - worst[1]:+.1f} ({worst[2]})"
+    )
 
 
 def main():
@@ -157,7 +205,6 @@ def main():
     parser.add_argument("--show", type=int, default=5, help="how many largest differences to print per file")
     args = parser.parse_args()
     import pyarrow.parquet as pq
-
     from build_season_display import team_abbrevs
 
     metrics = METRICS_ROOT / f"season={args.season}"
@@ -174,12 +221,17 @@ def main():
         ours = [r for r in players if r["situation"] == situation and (r["kind"] == "total" or r["teams"] == r["team"])]
         matched, unmatched, spare = match_skaters(nst_rows, ours)
         pairs = skater_pairs(nst_rows, matched)
-        print(f"\nSkaters, {label}: {len(nst_rows)} in NST, {len(matched)} matched, {len(unmatched)} NST rows unmatched, "
-              f"{len(spare)} of our rows unmatched")
+        print(
+            f"\nSkaters, {label}: {len(nst_rows)} in NST, {len(matched)} matched, {len(unmatched)} NST rows unmatched, "
+            f"{len(spare)} of our rows unmatched"
+        )
         toi_report(pairs)
         report({stat: pairs[stat] for stat in STATS}, args.show)
         if unmatched:
-            print("  NST rows not matched: " + "; ".join(f"{nst_rows[i]['Player']} ({nst_rows[i]['Team']})" for i in unmatched[:15]))
+            print(
+                "  NST rows not matched: "
+                + "; ".join(f"{nst_rows[i]['Player']} ({nst_rows[i]['Team']})" for i in unmatched[:15])
+            )
         if spare:
             print("  our rows not matched: " + "; ".join(f"{r['name']} ({r['teams']})" for r in spare[:15]))
 

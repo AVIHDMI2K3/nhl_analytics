@@ -42,7 +42,13 @@ STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 INTERMEDIATE_ROOT = REPO_ROOT / "data" / "intermediate"
 SHIFT_COLUMNS = [
-    "game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds", "is_goalie",
+    "game_id",
+    "player_id",
+    "team_id",
+    "period",
+    "start_game_seconds",
+    "end_game_seconds",
+    "is_goalie",
 ]
 STRENGTHS = ("ev", "pp", "sh")
 REFERENCE_FIELDS = {"ev": "evTimeOnIce", "pp": "ppTimeOnIce", "sh": "shTimeOnIce"}
@@ -67,7 +73,9 @@ def time_on_ice_check(stint_rows_all, season):
                 ours[(player_id, row[f"{side}_strength"])] += row["seconds"]
     order = ["exact", "<=2 s", "<=10 s", "<=60 s", ">60 s"]
     print(f"\nA. Time on ice by strength vs the NHL ({len(reference)} skaters)")
-    print(f"{'strength':9s}" + "".join(f"{b:>9s}" for b in order) + f"{'our total':>12s}{'NHL total':>12s}{'diff %':>9s}")
+    print(
+        f"{'strength':9s}" + "".join(f"{b:>9s}" for b in order) + f"{'our total':>12s}{'NHL total':>12s}{'diff %':>9s}"
+    )
     for strength in STRENGTHS:
         counts = dict.fromkeys(order, 0)
         ours_total = nhl_total = 0
@@ -77,7 +85,8 @@ def time_on_ice_check(stint_rows_all, season):
             nhl_total += ref[REFERENCE_FIELDS[strength]]
             counts[bucket(value - ref[REFERENCE_FIELDS[strength]])] += 1
         print(
-            f"{strength:9s}" + "".join(f"{counts[b]:>9d}" for b in order)
+            f"{strength:9s}"
+            + "".join(f"{counts[b]:>9d}" for b in order)
             + f"{ours_total:>12d}{nhl_total:>12d}{100 * (ours_total - nhl_total) / nhl_total:>8.2f}%"
         )
 
@@ -99,8 +108,18 @@ def main():
     metrics = METRICS_ROOT / f"season={args.season}"
     attempts = pq.read_table(
         metrics / "shot_attempts.parquet",
-        columns=["game_id", "game_seconds", "attempt_type", "shooter_id", "is_home", "skaters_for",
-                 "skaters_against", "goalie_for", "goalie_against", "matches_situation"],
+        columns=[
+            "game_id",
+            "game_seconds",
+            "attempt_type",
+            "shooter_id",
+            "is_home",
+            "skaters_for",
+            "skaters_against",
+            "goalie_for",
+            "goalie_against",
+            "matches_situation",
+        ],
     ).to_pylist()
     box = pq.read_table(
         STAGING_ROOT / f"season={args.season}" / "boxscore_players.parquet",
@@ -110,18 +129,13 @@ def main():
         STAGING_ROOT / f"season={args.season}" / "games.parquet",
         columns=["game_id", "home_team_id", "away_team_id"],
     ).to_pydict()
-    games = {
-        g: {"game_id": g, "home_team_id": h, "away_team_id": a}
-        for g, h, a in zip(*games_columns.values())
-    }
+    games = {g: {"game_id": g, "home_team_id": h, "away_team_id": a} for g, h, a in zip(*games_columns.values())}
     shift_columns = pq.read_table(
         INTERMEDIATE_ROOT / f"season={args.season}" / "shifts_clean.parquet", columns=SHIFT_COLUMNS
     ).to_pydict()
     shifts_by_game = defaultdict(list)
     for i in range(len(shift_columns["game_id"])):
-        shifts_by_game[shift_columns["game_id"][i]].append(
-            {name: shift_columns[name][i] for name in SHIFT_COLUMNS}
-        )
+        shifts_by_game[shift_columns["game_id"][i]].append({name: shift_columns[name][i] for name in SHIFT_COLUMNS})
     by_game = {
         game_id: stint_rows(games[game_id], build_stints(games[game_id], rows))
         for game_id, rows in shifts_by_game.items()
@@ -166,14 +180,21 @@ def main():
     }
     exact = sum(1 for key, value in official.items() if ours_ppg.get(key, 0) == value)
     differences = sorted(
-        ((abs(ours_ppg.get(key, 0) - value), key, ours_ppg.get(key, 0) - value)
-         for key, value in official.items() if ours_ppg.get(key, 0) != value),
+        (
+            (abs(ours_ppg.get(key, 0) - value), key, ours_ppg.get(key, 0) - value)
+            for key, value in official.items()
+            if ours_ppg.get(key, 0) != value
+        ),
         reverse=True,
     )
-    print(f"\nB. Power-play goals per player-game vs the boxscore: {exact} of {len(official)} exact "
-          f"({100 * exact / len(official):.2f}%)")
-    print(f"   goals checked: {goals}; our power-play goals: {sum(ours_ppg.values())}; "
-          f"boxscore power-play goals: {sum(official.values())}")
+    print(
+        f"\nB. Power-play goals per player-game vs the boxscore: {exact} of {len(official)} exact "
+        f"({100 * exact / len(official):.2f}%)"
+    )
+    print(
+        f"   goals checked: {goals}; our power-play goals: {sum(ours_ppg.values())}; "
+        f"boxscore power-play goals: {sum(official.values())}"
+    )
     print(f"   attempts outside every stint: {outside}")
     for _, (game_id, player_id), difference in differences[:8]:
         print(f"   {game_id} {player_id} ours minus boxscore {difference:+d}")

@@ -24,21 +24,41 @@ Save percentage and goals-against average are rates, worked out in season_displa
 from collections import Counter, defaultdict
 
 SUM_COLUMNS = (
-    "goals", "assists", "points", "plus_minus", "pim", "hits", "power_play_goals",
-    "sog", "blocked_shots", "giveaways", "takeaways", "toi_seconds", "shifts",
+    "goals",
+    "assists",
+    "points",
+    "plus_minus",
+    "pim",
+    "hits",
+    "power_play_goals",
+    "sog",
+    "blocked_shots",
+    "giveaways",
+    "takeaways",
+    "toi_seconds",
+    "shifts",
 )
 REGULAR_SEASON = 2
 GOALIE_SUM_COLUMNS = (
-    "toi_seconds", "pim", "shots_against", "saves", "goals_against",
-    "even_strength_shots_against", "even_strength_goals_against",
-    "power_play_shots_against", "power_play_goals_against",
-    "shorthanded_shots_against", "shorthanded_goals_against",
+    "toi_seconds",
+    "pim",
+    "shots_against",
+    "saves",
+    "goals_against",
+    "even_strength_shots_against",
+    "even_strength_goals_against",
+    "power_play_shots_against",
+    "power_play_goals_against",
+    "shorthanded_shots_against",
+    "shorthanded_goals_against",
 )
 GOALIE_COUNT_COLUMNS = ("games_started", "wins", "losses", "ot_losses", "shutouts")
 GOALIE_COLUMNS = GOALIE_SUM_COLUMNS + GOALIE_COUNT_COLUMNS
 DECISION_COLUMNS = {"W": "wins", "L": "losses", "O": "ot_losses"}
 SHOTS_BY_STRENGTH = (  # our column <- the boxscore's "saves/shots" text column
-    "even_strength_shots_against", "power_play_shots_against", "shorthanded_shots_against",
+    "even_strength_shots_against",
+    "power_play_shots_against",
+    "shorthanded_shots_against",
 )
 
 
@@ -82,6 +102,7 @@ def build_player_season_totals(box_rows, regular_game_ids, game_dates=None):
         rows.append(row)
     return rows
 
+
 def shots_in(text):
     """Shots from the boxscore's 'saves/shots' text: '15/17' is 17. Missing or malformed is 0."""
     if not isinstance(text, str):
@@ -96,9 +117,7 @@ def build_goalie_season_totals(box_rows, regular_game_ids, game_dates=None):
     `box_rows` are boxscore_players rows. A goalie who dressed but did not play has a row with
     zero games played. `game_dates` works as in build_player_season_totals.
     """
-    goalie_rows = [
-        row for row in box_rows if row["player_group"] == "goalies" and row["game_id"] in regular_game_ids
-    ]
+    goalie_rows = [row for row in box_rows if row["player_group"] == "goalies" and row["game_id"] in regular_game_ids]
     team_toi = Counter()  # (game, team) -> seconds all of the team's goalies played
     for row in goalie_rows:
         team_toi[(row["game_id"], row["team_id"])] += row["toi_seconds"] or 0
@@ -122,8 +141,12 @@ def build_goalie_season_totals(box_rows, regular_game_ids, game_dates=None):
         totals[key]["games_started"] += 1 if row["starter"] else 0
         if row["decision"] in DECISION_COLUMNS:
             totals[key][DECISION_COLUMNS[row["decision"]]] += 1
-        if (row["decision"] in ("W", "O") and toi > 0 and not row["goals_against"]
-                and toi == team_toi[(row["game_id"], row["team_id"])]):
+        if (
+            row["decision"] in ("W", "O")
+            and toi > 0
+            and not row["goals_against"]
+            and toi == team_toi[(row["game_id"], row["team_id"])]
+        ):
             totals[key]["shutouts"] += 1
     rows = []
     for key in sorted(totals):

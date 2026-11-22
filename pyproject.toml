@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E501"]
+"tests/test_compare_boxscore_to_nhl.py" = ["E501"]
+"tests/test_make_project_map.py" = ["E501"]

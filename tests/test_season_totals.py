@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import build_season_totals  # noqa: E402
 import season_totals  # noqa: E402
@@ -19,20 +17,49 @@ DATES = {1: "2025-10-01", 2: "2025-10-05", 3: "2025-12-01", 4: "2025-12-05"}
 def skater(game=1, player=7, team=1, toi=1000, position="C", **numbers):
     row = {column: 0 for column in season_totals.SUM_COLUMNS}
     row.update(numbers)
-    row.update(game_id=game, player_id=player, team_id=team, player_group="forwards", name=f"S{player}",
-               position=position, toi_seconds=toi)
+    row.update(
+        game_id=game,
+        player_id=player,
+        team_id=team,
+        player_group="forwards",
+        name=f"S{player}",
+        position=position,
+        toi_seconds=toi,
+    )
     return row
 
 
-def goalie(game=1, player=40, team=1, toi=3600, starter=True, decision=None, against=0,
-           ev=(0, 0), pp=(0, 0), sh=(0, 0), shots=0, **extra):
+def goalie(
+    game=1,
+    player=40,
+    team=1,
+    toi=3600,
+    starter=True,
+    decision=None,
+    against=0,
+    ev=(0, 0),
+    pp=(0, 0),
+    sh=(0, 0),
+    shots=0,
+    **extra,
+):
     """A goalie row. `ev`, `pp` and `sh` are (saves, shots) for each strength."""
     row = {column: 0 for column in season_totals.GOALIE_SUM_COLUMNS}
     row.update(
-        game_id=game, player_id=player, team_id=team, player_group="goalies", name=f"G{player}", position="G",
-        toi_seconds=toi, starter=starter, decision=decision, goals_against=against, shots_against=shots,
+        game_id=game,
+        player_id=player,
+        team_id=team,
+        player_group="goalies",
+        name=f"G{player}",
+        position="G",
+        toi_seconds=toi,
+        starter=starter,
+        decision=decision,
+        goals_against=against,
+        shots_against=shots,
         saves=shots - against,
-        even_strength_shots_against=f"{ev[0]}/{ev[1]}", power_play_shots_against=f"{pp[0]}/{pp[1]}",
+        even_strength_shots_against=f"{ev[0]}/{ev[1]}",
+        power_play_shots_against=f"{pp[0]}/{pp[1]}",
         shorthanded_shots_against=f"{sh[0]}/{sh[1]}",
     )
     row.update(extra)
@@ -64,7 +91,10 @@ def test_games_played_counts_only_games_with_time_on_ice_and_none_counts_as_zero
 def test_a_traded_skater_has_one_row_per_team():
     rows = [skater(game=1, team=1, goals=1), skater(game=3, team=2, goals=4)]
     out = season_totals.build_player_season_totals(rows, REGULAR, DATES)
-    assert [(r["team_id"], r["goals"], r["first_game_date"]) for r in out] == [(1, 1, "2025-10-01"), (2, 4, "2025-12-01")]
+    assert [(r["team_id"], r["goals"], r["first_game_date"]) for r in out] == [
+        (1, 1, "2025-10-01"),
+        (2, 4, "2025-12-01"),
+    ]
 
 
 def test_the_position_is_the_one_most_often_listed():
@@ -110,10 +140,14 @@ def test_a_shutout_needs_all_of_the_teams_goalie_time_and_no_goals_against():
     rows = [
         goalie(game=1, against=0, shots=20, decision="W"),  # won, played everything, nothing allowed: a shutout
         goalie(game=2, against=1, shots=20),  # allowed one
-        goalie(game=3, player=40, toi=2400, against=0, shots=10, decision="W"),  # relieved, nothing allowed: not a shutout
+        goalie(
+            game=3, player=40, toi=2400, against=0, shots=10, decision="W"
+        ),  # relieved, nothing allowed: not a shutout
         goalie(game=3, player=41, toi=1200, starter=False, against=0, shots=8, decision="W"),
         goalie(game=4, player=42, against=0, shots=20, decision="L"),  # lost in regulation: not a shutout
-        goalie(game=4, player=43, team=2, toi=3900, against=0, shots=20, decision="O"),  # lost the shootout of a 0-0 game: a shutout
+        goalie(
+            game=4, player=43, team=2, toi=3900, against=0, shots=20, decision="O"
+        ),  # lost the shootout of a 0-0 game: a shutout
     ]
     out = {r["player_id"]: r for r in season_totals.build_goalie_season_totals(rows, REGULAR, DATES)}
     assert out[40]["shutouts"] == 1 and out[41]["shutouts"] == 0

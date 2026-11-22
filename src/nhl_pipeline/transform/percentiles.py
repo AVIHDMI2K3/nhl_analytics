@@ -52,10 +52,26 @@ STATS = [
 ]
 STATS_BY_KEY = {stat[0]: stat for stat in STATS}
 DEFAULT_CHART = {
-    "F": ["goals_per_60", "assists_per_60", "cf_pct", "ff_pct", "cf_per_60", "ca_per_60", "cf_pct_rel",
-          "takeaways_per_60"],
-    "D": ["goals_per_60", "assists_per_60", "cf_per_60", "ca_per_60", "cf_pct_rel", "blocks_per_60", "hits_per_60",
-          "takeaways_per_60"],
+    "F": [
+        "goals_per_60",
+        "assists_per_60",
+        "cf_pct",
+        "ff_pct",
+        "cf_per_60",
+        "ca_per_60",
+        "cf_pct_rel",
+        "takeaways_per_60",
+    ],
+    "D": [
+        "goals_per_60",
+        "assists_per_60",
+        "cf_per_60",
+        "ca_per_60",
+        "cf_pct_rel",
+        "blocks_per_60",
+        "hits_per_60",
+        "takeaways_per_60",
+    ],
 }
 
 
@@ -127,12 +143,24 @@ def build_percentile_rows(season, display_rows, advanced_rows, min_minutes=600, 
             stat = STATS_BY_KEY.get(key) or next(s for s in stats if s[0] == key)
             value = stat_value(stat, row, adv)
             pool = pools.get((group, key), [])
-            out.append({
-                "season": season, "player_id": player_id, "name": row["name"], "position": row["position"],
-                "position_group": group, "team": row["team"], "teams": row["teams"],
-                "minutes_5v5": round(minutes, 1), "in_pool": in_pool,
-                "stat": key, "label": label, "value": value,
-                "percentile": percentile_rank(value, pool, higher), "pool_size": len(pool),
-                "higher_is_better": higher, "in_default_chart": key in DEFAULT_CHART[group],
-            })
+            out.append(
+                {
+                    "season": season,
+                    "player_id": player_id,
+                    "name": row["name"],
+                    "position": row["position"],
+                    "position_group": group,
+                    "team": row["team"],
+                    "teams": row["teams"],
+                    "minutes_5v5": round(minutes, 1),
+                    "in_pool": in_pool,
+                    "stat": key,
+                    "label": label,
+                    "value": value,
+                    "percentile": percentile_rank(value, pool, higher),
+                    "pool_size": len(pool),
+                    "higher_is_better": higher,
+                    "in_default_chart": key in DEFAULT_CHART[group],
+                }
+            )
     return out

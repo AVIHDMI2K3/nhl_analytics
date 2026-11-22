@@ -5,22 +5,39 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import build_team_basic  # noqa: E402
 import team_basic  # noqa: E402
 
 
 def game(game_id, home, away, home_score, away_score, ended="REG", game_type=2, has_boxscore=True):
-    return {"game_id": game_id, "game_type": game_type, "has_boxscore": has_boxscore, "home_team_id": home,
-            "away_team_id": away, "home_score": home_score, "away_score": away_score, "last_period_type": ended}
+    return {
+        "game_id": game_id,
+        "game_type": game_type,
+        "has_boxscore": has_boxscore,
+        "home_team_id": home,
+        "away_team_id": away,
+        "home_score": home_score,
+        "away_score": away_score,
+        "last_period_type": ended,
+    }
 
 
 def player(game_id, team, group="forwards", **numbers):
-    row = {"game_id": game_id, "team_id": team, "player_group": group, "sog": 0, "hits": 0, "blocked_shots": 0,
-           "giveaways": 0, "takeaways": 0, "pim": 0, "power_play_goals": 0, "power_play_goals_against": 0}
+    row = {
+        "game_id": game_id,
+        "team_id": team,
+        "player_group": group,
+        "sog": 0,
+        "hits": 0,
+        "blocked_shots": 0,
+        "giveaways": 0,
+        "takeaways": 0,
+        "pim": 0,
+        "power_play_goals": 0,
+        "power_play_goals_against": 0,
+    }
     row.update(numbers)
     return row
 
@@ -32,8 +49,8 @@ def by_team(rows):
 def test_record_points_and_overtime_rules():
     games = [
         game(1, 1, 2, 3, 1, "REG"),  # team 1 wins in regulation
-        game(2, 1, 2, 2, 3, "OT"),   # team 2 wins in overtime, team 1 loses in overtime
-        game(3, 2, 1, 4, 3, "SO"),   # team 2 wins in a shootout, team 1 loses in a shootout
+        game(2, 1, 2, 2, 3, "OT"),  # team 2 wins in overtime, team 1 loses in overtime
+        game(3, 2, 1, 4, 3, "SO"),  # team 2 wins in a shootout, team 1 loses in a shootout
     ]
     rows, notes = team_basic.build_team_basic(games, [])
     one, two = by_team(rows)[1], by_team(rows)[2]
@@ -48,8 +65,12 @@ def test_record_points_and_overtime_rules():
 
 def test_other_game_types_and_games_without_boxscore_or_score_are_left_out():
     rows, notes = team_basic.build_team_basic(
-        [game(1, 1, 2, 1, 0), game(2, 1, 2, 1, 0, game_type=3), game(3, 1, 2, 1, 0, has_boxscore=False),
-         game(4, 1, 2, None, None)],
+        [
+            game(1, 1, 2, 1, 0),
+            game(2, 1, 2, 1, 0, game_type=3),
+            game(3, 1, 2, 1, 0, has_boxscore=False),
+            game(4, 1, 2, None, None),
+        ],
         [],
     )
     assert by_team(rows)[1]["games_played"] == 1 and notes["games_without_score"] == 1

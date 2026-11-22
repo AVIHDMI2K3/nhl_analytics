@@ -9,8 +9,13 @@ import diagnose_team_opportunities as d  # noqa: E402
 
 
 def pen(team, second, minutes=2, game=1):
-    return {"game_id": game, "game_seconds": second, "event_owner_team_id": team,
-            "penalty_minutes": minutes, "opponent_team_id": 2 if team == 1 else 1}
+    return {
+        "game_id": game,
+        "game_seconds": second,
+        "event_owner_team_id": team,
+        "penalty_minutes": minutes,
+        "opponent_team_id": 2 if team == 1 else 1,
+    }
 
 
 def test_each_minor_gives_the_other_team_an_opportunity():
@@ -47,9 +52,13 @@ def test_majors_can_be_left_out_of_the_offset_and_double_minors_counted_twice():
 
 
 def test_cancelled_pairs_are_counted_by_minutes_and_type():
-    rows = [{**pen(1, 100, 5), "penalty_type_code": "MAJ"}, {**pen(2, 100, 5), "penalty_type_code": "MAJ"},
-            {**pen(1, 200), "penalty_type_code": "MIN"}, {**pen(2, 200), "penalty_type_code": "BEN"},
-            {**pen(1, 300), "penalty_type_code": "MIN"}]
+    rows = [
+        {**pen(1, 100, 5), "penalty_type_code": "MAJ"},
+        {**pen(2, 100, 5), "penalty_type_code": "MAJ"},
+        {**pen(1, 200), "penalty_type_code": "MIN"},
+        {**pen(2, 200), "penalty_type_code": "BEN"},
+        {**pen(1, 300), "penalty_type_code": "MIN"},
+    ]
     assert d.cancelled_pairs(rows) == {(5, "MAJ", "MAJ"): 1, (2, "BEN", "MIN"): 1}
 
 
@@ -109,8 +118,10 @@ def test_expiry_steps_count_a_power_play_left_after_the_other_penalty_runs_out()
 
 
 def test_penalties_at_the_end_of_regulation_can_be_ignored():
-    rows = [{**pen(1, 3600), "period_type": "REG", "game_has_ot": False},
-            {**pen(2, 3600, game=2), "period_type": "REG", "game_has_ot": True}]
+    rows = [
+        {**pen(1, 3600), "period_type": "REG", "game_has_ot": False},
+        {**pen(2, 3600, game=2), "period_type": "REG", "game_has_ot": True},
+    ]
     assert d.count_opportunities(rows)[0][2] == 1 and d.count_opportunities(rows)[0][1] == 1
     assert not d.count_opportunities(rows, ignore_end="regulation")[0]
     assert d.count_opportunities(rows, ignore_end="no_overtime")[0][1] == 1  # only the overtime game's
@@ -126,8 +137,10 @@ def test_a_minor_does_not_count_against_a_major_at_the_same_second():
 
 
 def test_late_penalties_are_left_out_only_in_games_without_overtime():
-    rows = [{**pen(1, 3590), "period_type": "REG", "game_has_ot": False},
-            {**pen(1, 3590, game=2), "period_type": "REG", "game_has_ot": True},
-            {**pen(1, 3000), "period_type": "REG", "game_has_ot": False}]
+    rows = [
+        {**pen(1, 3590), "period_type": "REG", "game_has_ot": False},
+        {**pen(1, 3590, game=2), "period_type": "REG", "game_has_ot": True},
+        {**pen(1, 3000), "period_type": "REG", "game_has_ot": False},
+    ]
     assert d.count_opportunities(rows, late_seconds=20)[0][2] == 2
     assert d.count_opportunities(rows, late_seconds=5)[0][2] == 3

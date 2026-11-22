@@ -17,24 +17,44 @@ FACEOFF_SITUATION = "all"
 
 # (output column, source column, "minutes" to turn seconds into minutes)
 ADVANCED_5V5 = (
-    ("minutes_5v5", "seconds", "minutes"), ("cf_5v5", "cf", None), ("ca_5v5", "ca", None),
-    ("cf_pct_5v5", "cf_pct", None), ("cf_pct_rel_5v5", "cf_pct_rel", None), ("ff_pct_5v5", "ff_pct", None),
-    ("sf_pct_5v5", "sf_pct", None), ("gf_5v5", "gf", None), ("ga_5v5", "ga", None), ("gf_pct_5v5", "gf_pct", None),
-    ("cf_per_60_5v5", "cf_per_60", None), ("ca_per_60_5v5", "ca_per_60", None),
-    ("icf_5v5", "icf", None), ("isf_5v5", "isf", None), ("ig_5v5", "ig", None),
+    ("minutes_5v5", "seconds", "minutes"),
+    ("cf_5v5", "cf", None),
+    ("ca_5v5", "ca", None),
+    ("cf_pct_5v5", "cf_pct", None),
+    ("cf_pct_rel_5v5", "cf_pct_rel", None),
+    ("ff_pct_5v5", "ff_pct", None),
+    ("sf_pct_5v5", "sf_pct", None),
+    ("gf_5v5", "gf", None),
+    ("ga_5v5", "ga", None),
+    ("gf_pct_5v5", "gf_pct", None),
+    ("cf_per_60_5v5", "cf_per_60", None),
+    ("ca_per_60_5v5", "ca_per_60", None),
+    ("icf_5v5", "icf", None),
+    ("isf_5v5", "isf", None),
+    ("ig_5v5", "ig", None),
     ("blocks_made_5v5", "blocks_made", None),
 )
 POWER_PLAY = (
-    ("pp_minutes", "seconds", "minutes"), ("pp_goals", "goals", None), ("pp_assists", "assists", None),
-    ("pp_points", "points", None), ("pp_shots", "shots", None), ("pp_points_per_60", "points_per_60", None),
+    ("pp_minutes", "seconds", "minutes"),
+    ("pp_goals", "goals", None),
+    ("pp_assists", "assists", None),
+    ("pp_points", "points", None),
+    ("pp_shots", "shots", None),
+    ("pp_points_per_60", "points_per_60", None),
     ("pp_team_share_pct", "team_share_pct", None),
 )
 PENALTY_KILL = (
-    ("pk_minutes", "seconds", "minutes"), ("pk_goals", "goals", None), ("pk_points", "points", None),
-    ("pk_ga", "ga", None), ("pk_ga_per_60", "ga_per_60", None), ("pk_team_share_pct", "team_share_pct", None),
+    ("pk_minutes", "seconds", "minutes"),
+    ("pk_goals", "goals", None),
+    ("pk_points", "points", None),
+    ("pk_ga", "ga", None),
+    ("pk_ga_per_60", "ga_per_60", None),
+    ("pk_team_share_pct", "team_share_pct", None),
 )
 FACEOFFS = (
-    ("fo_faceoffs", "faceoffs", None), ("fo_wins", "faceoff_wins", None), ("fo_pct", "faceoff_pct", None),
+    ("fo_faceoffs", "faceoffs", None),
+    ("fo_wins", "faceoff_wins", None),
+    ("fo_pct", "faceoff_pct", None),
 )
 
 

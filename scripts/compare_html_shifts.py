@@ -44,6 +44,7 @@ def fetch(game_id, side, pause):
 
 def compare_players(api_rows, html_rows):
     """{player_id: (api shifts, html shifts, api seconds, html seconds, identical shifts)} for the players in either."""
+
     def by_player(rows):
         grouped = defaultdict(list)
         for row in rows:
@@ -68,10 +69,14 @@ def main():
     import pyarrow.parquet as pq
 
     staging = REPO_ROOT / "data" / "staging" / f"season={args.season}"
-    shifts = pq.read_table(staging / "shifts.parquet", columns=[
-        "game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds"])
-    box = pq.read_table(staging / "boxscore_players.parquet",
-                        columns=["game_id", "team_id", "home_or_away", "player_id", "sweater_number"])
+    shifts = pq.read_table(
+        staging / "shifts.parquet",
+        columns=["game_id", "player_id", "team_id", "period", "start_game_seconds", "end_game_seconds"],
+    )
+    box = pq.read_table(
+        staging / "boxscore_players.parquet",
+        columns=["game_id", "team_id", "home_or_away", "player_id", "sweater_number"],
+    )
     for game_id in args.games:
         api = pc.filter(shifts, pc.equal(shifts["game_id"], game_id)).to_pylist()
         players = pc.filter(box, pc.equal(box["game_id"], game_id)).to_pylist()
@@ -84,10 +89,12 @@ def main():
             unmatched += missing
         compared = compare_players(api, html_rows)
         identical = sum(v[4] for v in compared.values())
-        print(f"{game_id}: API {len(api)} shifts, HTML {len(html_rows)}; identical start/end in {identical}; "
-              f"players with different shift counts {sum(v[0] != v[1] for v in compared.values())}; "
-              f"different seconds {sum(v[2] != v[3] for v in compared.values())}; "
-              f"HTML players without an id {unmatched}")
+        print(
+            f"{game_id}: API {len(api)} shifts, HTML {len(html_rows)}; identical start/end in {identical}; "
+            f"players with different shift counts {sum(v[0] != v[1] for v in compared.values())}; "
+            f"different seconds {sum(v[2] != v[3] for v in compared.values())}; "
+            f"HTML players without an id {unmatched}"
+        )
         for player, (na, nh, sa, sh, same) in sorted(compared.items(), key=lambda i: -abs(i[1][2] - i[1][3]))[:3]:
             if sa != sh:
                 print(f"    player {player}: shifts API {na} HTML {nh}, seconds API {sa} HTML {sh}, identical {same}")

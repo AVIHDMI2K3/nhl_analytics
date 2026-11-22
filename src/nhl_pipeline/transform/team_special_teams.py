@@ -28,9 +28,18 @@ from collections import Counter, defaultdict
 from onice import parse_situation_code
 from special_teams import code_strength
 
-COUNTED_MINUTES = (2, 4, 5)  # minors, double minors and majors; misconducts (10) and penalty shots (0) give no power play
+COUNTED_MINUTES = (
+    2,
+    4,
+    5,
+)  # minors, double minors and majors; misconducts (10) and penalty shots (0) give no power play
 GAME_COLUMNS = (
-    "pp_opportunities", "pp_goals", "times_shorthanded", "pk_goals_against", "sh_goals_for", "sh_goals_against",
+    "pp_opportunities",
+    "pp_goals",
+    "times_shorthanded",
+    "pk_goals_against",
+    "sh_goals_for",
+    "sh_goals_against",
 )
 SEASON_COLUMNS = GAME_COLUMNS
 RATE_COLUMNS = ("pp_pct", "pk_pct", "pp_opportunities_per_game", "times_shorthanded_per_game")
@@ -47,12 +56,17 @@ def prepare_penalties(events, games):
             continue
         game = games[event["game_id"]]
         owner = event["event_owner_team_id"]
-        rows.append({
-            "game_id": event["game_id"], "game_seconds": event["game_seconds"], "period_type": event["period_type"],
-            "event_owner_team_id": owner, "penalty_minutes": event["penalty_minutes"],
-            "opponent_team_id": game["away_team_id"] if owner == game["home_team_id"] else game["home_team_id"],
-            "game_has_ot": event["game_id"] in overtime,
-        })
+        rows.append(
+            {
+                "game_id": event["game_id"],
+                "game_seconds": event["game_seconds"],
+                "period_type": event["period_type"],
+                "event_owner_team_id": owner,
+                "penalty_minutes": event["penalty_minutes"],
+                "opponent_team_id": game["away_team_id"] if owner == game["home_team_id"] else game["home_team_id"],
+                "game_has_ot": event["game_id"] in overtime,
+            }
+        )
     return rows
 
 
@@ -120,10 +134,22 @@ def penalty_shot_goals(events, games):
             continue
         home = event["event_owner_team_id"] == game["home_team_id"]
         side, other = ("home", "away") if home else ("away", "home")
-        if (code[f"{side}_skaters"], code[f"{side}_goalie"], code[f"{other}_skaters"], code[f"{other}_goalie"]) == (1, 0, 0, 1):
-            rows.append({"game_id": event["game_id"], "event_id": event.get("event_id"),
-                         "game_seconds": event["game_seconds"], "team_id": event["event_owner_team_id"],
-                         "is_home": home, "shooter_id": event.get("scoring_player_id")})
+        if (code[f"{side}_skaters"], code[f"{side}_goalie"], code[f"{other}_skaters"], code[f"{other}_goalie"]) == (
+            1,
+            0,
+            0,
+            1,
+        ):
+            rows.append(
+                {
+                    "game_id": event["game_id"],
+                    "event_id": event.get("event_id"),
+                    "game_seconds": event["game_seconds"],
+                    "team_id": event["event_owner_team_id"],
+                    "is_home": home,
+                    "shooter_id": event.get("scoring_player_id"),
+                }
+            )
     return rows
 
 
@@ -151,8 +177,14 @@ def shorthanded_penalty_shot_attempts(shots, stints_by_game):
     team, to be counted with the other goals of the skater special-teams table (see
     special_teams.individual_counts_from_code, which uses a row's `strength` when it has one)."""
     return [
-        {"attempt_type": "goal", "game_id": s["game_id"], "event_id": s["event_id"], "shooter_id": s["shooter_id"],
-         "team_id": s["team_id"], "strength": "sh"}
+        {
+            "attempt_type": "goal",
+            "game_id": s["game_id"],
+            "event_id": s["event_id"],
+            "shooter_id": s["shooter_id"],
+            "team_id": s["team_id"],
+            "strength": "sh",
+        }
         for s in shots
         if stint_strength(stints_by_game.get(s["game_id"], ()), s["game_seconds"], s["is_home"]) == "sh"
     ]
@@ -160,7 +192,8 @@ def shorthanded_penalty_shot_attempts(shots, stints_by_game):
 
 def build_team_game_rows(games, penalties, attempts, shorthanded_shots=None):
     """One row per team and game (every game, every team): the GAME_COLUMNS plus game_id, team_id and
-    opponent_team_id. `shorthanded_shots` is the result of shorthanded_penalty_shot_goals. `games` {game_id: row with home_team_id and away_team_id}, `penalties` from
+    opponent_team_id. `shorthanded_shots` is the result of shorthanded_penalty_shot_goals. `games`
+    {game_id: row with home_team_id and away_team_id}, `penalties` from
     prepare_penalties, `attempts` shot_attempts rows."""
     opportunities, shorthanded = penalty_opportunities(penalties)
     goals = goals_by_strength(attempts)
@@ -171,15 +204,19 @@ def build_team_game_rows(games, penalties, attempts, shorthanded_shots=None):
         home, away = games[game_id]["home_team_id"], games[game_id]["away_team_id"]
         for team, other in ((home, away), (away, home)):
             mine, theirs = goals.get((game_id, team), Counter()), goals.get((game_id, other), Counter())
-            rows.append({
-                "game_id": game_id, "team_id": team, "opponent_team_id": other,
-                "pp_opportunities": opportunities.get((game_id, team), 0),
-                "pp_goals": mine["pp"],
-                "times_shorthanded": shorthanded.get((game_id, team), 0),
-                "pk_goals_against": theirs["pp"],
-                "sh_goals_for": mine["sh"],
-                "sh_goals_against": theirs["sh"],
-            })
+            rows.append(
+                {
+                    "game_id": game_id,
+                    "team_id": team,
+                    "opponent_team_id": other,
+                    "pp_opportunities": opportunities.get((game_id, team), 0),
+                    "pp_goals": mine["pp"],
+                    "times_shorthanded": shorthanded.get((game_id, team), 0),
+                    "pk_goals_against": theirs["pp"],
+                    "sh_goals_for": mine["sh"],
+                    "sh_goals_against": theirs["sh"],
+                }
+            )
     return rows
 
 
@@ -198,8 +235,11 @@ def build_team_season_rows(game_rows, abbrevs=None):
     rows = []
     for team_id in sorted(totals):
         total = totals[team_id]
-        row = {"team_id": team_id, "team": (abbrevs or {}).get(team_id, str(team_id)),
-               "games_played": total["games_played"]}
+        row = {
+            "team_id": team_id,
+            "team": (abbrevs or {}).get(team_id, str(team_id)),
+            "games_played": total["games_played"],
+        }
         row.update({column: total[column] for column in SEASON_COLUMNS})
         row["pp_pct"] = percent(total["pp_goals"], total["pp_opportunities"])
         killed = percent(total["pk_goals_against"], total["times_shorthanded"])

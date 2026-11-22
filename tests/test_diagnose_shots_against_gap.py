@@ -7,9 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import diagnose_shots_against_gap as diag  # noqa: E402
 import stints  # noqa: E402
@@ -18,8 +16,15 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 
 
 def shift(player, team, start, end, goalie=False):
-    return {"game_id": 1, "player_id": player, "team_id": team, "period": 1,
-            "start_game_seconds": start, "end_game_seconds": end, "is_goalie": goalie}
+    return {
+        "game_id": 1,
+        "player_id": player,
+        "team_id": team,
+        "period": 1,
+        "start_game_seconds": start,
+        "end_game_seconds": end,
+        "is_goalie": goalie,
+    }
 
 
 def stint_rows(home_goalie_off_from=None):
@@ -35,8 +40,14 @@ def stint_rows(home_goalie_off_from=None):
 
 
 def event(time, owner, goalie, kind="shot-on-goal", period_type="REG", code="1551"):
-    return {"event_type": kind, "period_type": period_type, "game_seconds": time, "event_owner_team_id": owner,
-            "goalie_in_net_id": goalie, "situation_code": code}
+    return {
+        "event_type": kind,
+        "period_type": period_type,
+        "game_seconds": time,
+        "event_owner_team_id": owner,
+        "goalie_in_net_id": goalie,
+        "situation_code": code,
+    }
 
 
 def box(team, player, group, **numbers):
@@ -49,7 +60,10 @@ def test_empty_net_shots_are_counted_from_events_and_shifts():
     records, mismatches, goalies = diag.analyze_game(GAME, events, stint_rows(60), boxes)
     home = records[1]
     assert (home["events"], home["events_goalie"], home["events_empty"], home["stints_empty"]) == (3, 2, 1, 1)
-    assert (home["box_skater_shots"], home["box_goalie_shots"]) == (3, 2)  # the opponent's skater shots, his goalie's shots against
+    assert (home["box_skater_shots"], home["box_goalie_shots"]) == (
+        3,
+        2,
+    )  # the opponent's skater shots, his goalie's shots against
     assert not mismatches
     assert goalies == [{"game_id": 1, "player_id": 10, "team_id": 1, "box": 2, "events": 2}]
 
@@ -64,8 +78,7 @@ def test_a_disagreement_is_reported_with_the_distance_to_the_goalie_change():
 
 
 def test_shootout_and_other_events_are_ignored_and_penalty_shots_counted():
-    events = [event(5, 2, 10, period_type="SO"), event(6, 2, 10, kind="missed-shot"),
-              event(7, 2, 10, code="1010")]
+    events = [event(5, 2, 10, period_type="SO"), event(6, 2, 10, kind="missed-shot"), event(7, 2, 10, code="1010")]
     records, _, _ = diag.analyze_game(GAME, events, stint_rows(), [])
     assert records[1]["events"] == 1 and records[1]["penalty_shots"] == 1
 

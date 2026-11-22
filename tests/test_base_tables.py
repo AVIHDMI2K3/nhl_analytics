@@ -8,9 +8,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import base_tables  # noqa: E402
 import build_base_tables  # noqa: E402
@@ -21,8 +19,13 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 
 def shift(player, team, start, end, goalie=False):
     return {
-        "game_id": 1, "player_id": player, "team_id": team, "period": 1,
-        "start_game_seconds": start, "end_game_seconds": end, "is_goalie": goalie,
+        "game_id": 1,
+        "player_id": player,
+        "team_id": team,
+        "period": 1,
+        "start_game_seconds": start,
+        "end_game_seconds": end,
+        "is_goalie": goalie,
     }
 
 
@@ -35,15 +38,17 @@ def ice(start, end, home=range(11, 16), away=range(21, 26)):
 
 def attempt(kind, time, home=True, shooter=11, blocker=None, teammate_block=None):
     return {
-        "attempt_type": kind, "game_seconds": time, "is_home": home, "shooter_id": shooter,
-        "blocker_id": blocker, "blocker_is_teammate": teammate_block,
+        "attempt_type": kind,
+        "game_seconds": time,
+        "is_home": home,
+        "shooter_id": shooter,
+        "blocker_id": blocker,
+        "blocker_is_teammate": teammate_block,
     }
 
 
 def tables(shift_rows, attempts):
-    return base_tables.build_game_tables(
-        GAME, stints.stint_rows(GAME, stints.build_stints(GAME, shift_rows)), attempts
-    )
+    return base_tables.build_game_tables(GAME, stints.stint_rows(GAME, stints.build_stints(GAME, shift_rows)), attempts)
 
 
 def find(rows, **wanted):
@@ -74,7 +79,12 @@ def test_a_shot_credits_the_shooter_both_teams_and_the_players_on_the_ice():
 
 
 def test_each_attempt_kind_has_its_own_column():
-    attempts = [attempt("goal", 10), attempt("shot-on-goal", 20), attempt("missed-shot", 30), attempt("blocked-shot", 40)]
+    attempts = [
+        attempt("goal", 10),
+        attempt("shot-on-goal", 20),
+        attempt("missed-shot", 30),
+        attempt("blocked-shot", 40),
+    ]
     players, _, _ = tables(ice(0, 60), attempts)
     row = find(players, player_id=11)
     assert [row[f"ind_{k}"] for k in base_tables.KINDS] == [1, 1, 1, 1]
@@ -91,16 +101,34 @@ def test_goals_are_end_inclusive_and_other_attempts_start_inclusive():
 def test_boundary_rule_by_attempt_type_at_a_line_change():
     # all ten skaters change at 60; each attempt happens at second 60
     rows = ice(0, 60) + ice(60, 120, home=range(16, 21), away=range(26, 31))
-    attempts = [attempt("shot-on-goal", 60, shooter=11), attempt("missed-shot", 60, shooter=16),
-                attempt("goal", 60, shooter=11)]
+    attempts = [
+        attempt("shot-on-goal", 60, shooter=11),
+        attempt("missed-shot", 60, shooter=16),
+        attempt("goal", 60, shooter=11),
+    ]
     players, _, _ = tables(rows, attempts)
     # shot on goal and goal: both sides from the stint ending at 60
-    assert find(players, player_id=11, strength="ev")["for_sog"] == 1 and find(players, player_id=16, strength="ev")["for_sog"] == 0
-    assert find(players, player_id=21, strength="ev")["against_sog"] == 1 and find(players, player_id=26, strength="ev")["against_sog"] == 0
-    assert find(players, player_id=11, strength="ev")["for_goal"] == 1 and find(players, player_id=21, strength="ev")["against_goal"] == 1
+    assert (
+        find(players, player_id=11, strength="ev")["for_sog"] == 1
+        and find(players, player_id=16, strength="ev")["for_sog"] == 0
+    )
+    assert (
+        find(players, player_id=21, strength="ev")["against_sog"] == 1
+        and find(players, player_id=26, strength="ev")["against_sog"] == 0
+    )
+    assert (
+        find(players, player_id=11, strength="ev")["for_goal"] == 1
+        and find(players, player_id=21, strength="ev")["against_goal"] == 1
+    )
     # missed shot: the shooting side from the stint starting at 60, the defenders from the one ending at 60
-    assert find(players, player_id=16, strength="ev")["for_miss"] == 1 and find(players, player_id=11, strength="ev")["for_miss"] == 0
-    assert find(players, player_id=21, strength="ev")["against_miss"] == 1 and find(players, player_id=26, strength="ev")["against_miss"] == 0
+    assert (
+        find(players, player_id=16, strength="ev")["for_miss"] == 1
+        and find(players, player_id=11, strength="ev")["for_miss"] == 0
+    )
+    assert (
+        find(players, player_id=21, strength="ev")["against_miss"] == 1
+        and find(players, player_id=26, strength="ev")["against_miss"] == 0
+    )
 
 
 def test_power_play_attempt_uses_each_sides_own_state():
@@ -111,8 +139,13 @@ def test_power_play_attempt_uses_each_sides_own_state():
 
 
 def coded(kind, time, sf, sa, gf=1, ga=1, **kw):
-    return {**attempt(kind, time, **kw), "skaters_for": sf, "skaters_against": sa,
-            "goalie_for": gf, "goalie_against": ga}
+    return {
+        **attempt(kind, time, **kw),
+        "skaters_for": sf,
+        "skaters_against": sa,
+        "goalie_for": gf,
+        "goalie_against": ga,
+    }
 
 
 def test_state_comes_from_the_situation_code_and_players_from_the_stint():
@@ -161,9 +194,7 @@ def test_blocks_made_only_when_the_blocker_is_on_the_other_team():
 
 
 def test_attempts_outside_stints_and_shooters_off_the_ice_are_noted():
-    players, teams, notes = tables(
-        ice(0, 60), [attempt("shot-on-goal", 500), attempt("shot-on-goal", 30, shooter=99)]
-    )
+    players, teams, notes = tables(ice(0, 60), [attempt("shot-on-goal", 500), attempt("shot-on-goal", 30, shooter=99)])
     assert notes["attempts_outside_stints"] == 1
     assert notes["shooter_not_on_ice"] == 1
     assert find(players, player_id=99)["ind_sog"] == 1
@@ -182,11 +213,14 @@ def test_cases_are_recorded_when_a_list_is_given():
     records = []
     stint_rows = stints.stint_rows(GAME, stints.build_stints(GAME, ice(0, 60)))
     base_tables.build_game_tables(
-        GAME, stint_rows,
-        [attempt("shot-on-goal", 30, shooter=10), attempt("shot-on-goal", 40, shooter=99)], records=records,
+        GAME,
+        stint_rows,
+        [attempt("shot-on-goal", 30, shooter=10), attempt("shot-on-goal", 40, shooter=99)],
+        records=records,
     )
     assert [(r["kind"], r["player_id"], r["game_seconds"]) for r in records] == [
-        ("goalie_shooter", 10, 30), ("shooter_not_on_ice", 99, 40),
+        ("goalie_shooter", 10, 30),
+        ("shooter_not_on_ice", 99, 40),
     ]
 
 

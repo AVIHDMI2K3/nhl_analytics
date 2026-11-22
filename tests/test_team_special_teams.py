@@ -13,8 +13,14 @@ GAMES = {1: {"home_team_id": 1, "away_team_id": 2}, 2: {"home_team_id": 2, "away
 
 
 def penalty(team, second, minutes=2, game=1, period="REG"):
-    return {"game_id": game, "event_type": "penalty", "period_type": period, "game_seconds": second,
-            "event_owner_team_id": team, "penalty_minutes": minutes}
+    return {
+        "game_id": game,
+        "event_type": "penalty",
+        "period_type": period,
+        "game_seconds": second,
+        "event_owner_team_id": team,
+        "penalty_minutes": minutes,
+    }
 
 
 def prepared(*events, extra=()):
@@ -22,14 +28,32 @@ def prepared(*events, extra=()):
 
 
 def goal(team, sf, sa, gf=1, ga=1, game=1):
-    return {"attempt_type": "goal", "game_id": game, "team_id": team, "skaters_for": sf, "skaters_against": sa,
-            "goalie_for": gf, "goalie_against": ga}
+    return {
+        "attempt_type": "goal",
+        "game_id": game,
+        "team_id": team,
+        "skaters_for": sf,
+        "skaters_against": sa,
+        "goalie_for": gf,
+        "goalie_against": ga,
+    }
 
 
 def test_prepare_adds_the_opponent_and_whether_the_game_went_to_overtime():
-    rows = prepared(penalty(1, 100), penalty(3, 200, game=2), extra=[
-        {"game_id": 2, "event_type": "period-start", "period_type": "OT", "game_seconds": 3600,
-         "event_owner_team_id": None, "penalty_minutes": None}])
+    rows = prepared(
+        penalty(1, 100),
+        penalty(3, 200, game=2),
+        extra=[
+            {
+                "game_id": 2,
+                "event_type": "period-start",
+                "period_type": "OT",
+                "game_seconds": 3600,
+                "event_owner_team_id": None,
+                "penalty_minutes": None,
+            }
+        ],
+    )
     assert [(r["opponent_team_id"], r["game_has_ot"]) for r in rows] == [(2, False), (2, True)]
 
 
@@ -58,8 +82,14 @@ def test_same_length_penalties_at_one_second_cancel_and_a_double_minor_leaves_on
 def test_penalties_at_the_end_of_regulation_count_only_when_there_is_overtime():
     opp, _ = t.penalty_opportunities(prepared(penalty(1, 3600)))
     assert not opp
-    ot = {"game_id": 1, "event_type": "period-start", "period_type": "OT", "game_seconds": 3600,
-          "event_owner_team_id": None, "penalty_minutes": None}
+    ot = {
+        "game_id": 1,
+        "event_type": "period-start",
+        "period_type": "OT",
+        "game_seconds": 3600,
+        "event_owner_team_id": None,
+        "penalty_minutes": None,
+    }
     opp, _ = t.penalty_opportunities(prepared(penalty(1, 3600), extra=[ot]))
     assert opp[(1, 2)] == 1
     opp, _ = t.penalty_opportunities(prepared(penalty(1, 3000)))
@@ -67,8 +97,15 @@ def test_penalties_at_the_end_of_regulation_count_only_when_there_is_overtime():
 
 
 def test_goals_by_strength_uses_the_situation_code_and_skips_even_strength():
-    goals = t.goals_by_strength([goal(1, 5, 4), goal(2, 4, 5), goal(1, 5, 5), goal(1, 6, 5, gf=0),
-                                 {**goal(1, 5, 4), "attempt_type": "shot-on-goal"}])
+    goals = t.goals_by_strength(
+        [
+            goal(1, 5, 4),
+            goal(2, 4, 5),
+            goal(1, 5, 5),
+            goal(1, 6, 5, gf=0),
+            {**goal(1, 5, 4), "attempt_type": "shot-on-goal"},
+        ]
+    )
     assert goals[(1, 1)]["pp"] == 1 and goals[(1, 2)]["sh"] == 1 and goals[(1, 1)]["sh"] == 0
     assert (1, 1) in goals and sum(goals[(1, 1)].values()) == 1
 
@@ -88,12 +125,36 @@ def test_game_rows_cover_every_team_and_game_with_goals_for_and_against():
 
 def test_season_rows_add_up_and_give_percentages():
     rows = [
-        {"game_id": 1, "team_id": 1, "pp_opportunities": 4, "pp_goals": 1, "times_shorthanded": 2,
-         "pk_goals_against": 1, "sh_goals_for": 0, "sh_goals_against": 0},
-        {"game_id": 2, "team_id": 1, "pp_opportunities": 4, "pp_goals": 1, "times_shorthanded": 2,
-         "pk_goals_against": 0, "sh_goals_for": 1, "sh_goals_against": 0},
-        {"game_id": 3, "team_id": 2, "pp_opportunities": 0, "pp_goals": 0, "times_shorthanded": 0,
-         "pk_goals_against": 0, "sh_goals_for": 0, "sh_goals_against": 0},
+        {
+            "game_id": 1,
+            "team_id": 1,
+            "pp_opportunities": 4,
+            "pp_goals": 1,
+            "times_shorthanded": 2,
+            "pk_goals_against": 1,
+            "sh_goals_for": 0,
+            "sh_goals_against": 0,
+        },
+        {
+            "game_id": 2,
+            "team_id": 1,
+            "pp_opportunities": 4,
+            "pp_goals": 1,
+            "times_shorthanded": 2,
+            "pk_goals_against": 0,
+            "sh_goals_for": 1,
+            "sh_goals_against": 0,
+        },
+        {
+            "game_id": 3,
+            "team_id": 2,
+            "pp_opportunities": 0,
+            "pp_goals": 0,
+            "times_shorthanded": 0,
+            "pk_goals_against": 0,
+            "sh_goals_for": 0,
+            "sh_goals_against": 0,
+        },
     ]
     one, two = t.build_team_season_rows(rows, {1: "AAA"})
     assert (one["team"], one["games_played"], one["pp_opportunities"], one["pp_goals"]) == ("AAA", 2, 8, 2)
@@ -103,13 +164,26 @@ def test_season_rows_add_up_and_give_percentages():
 
 
 def event(code, team=1, second=2257, period="REG", kind="goal", game=1):
-    return {"game_id": game, "event_type": kind, "period_type": period, "game_seconds": second,
-            "event_owner_team_id": team, "situation_code": code}
+    return {
+        "game_id": game,
+        "event_type": kind,
+        "period_type": period,
+        "game_seconds": second,
+        "event_owner_team_id": team,
+        "situation_code": code,
+    }
 
 
 def test_penalty_shot_goals_are_found_from_the_situation_code_for_either_side():
-    events = [event("1010", team=1), event("1010", team=2), event("0101", team=2), event("1551"),
-              event("1010", period="SO"), event("1010", kind="shot-on-goal"), event(None)]
+    events = [
+        event("1010", team=1),
+        event("1010", team=2),
+        event("0101", team=2),
+        event("1551"),
+        event("1010", period="SO"),
+        event("1010", kind="shot-on-goal"),
+        event(None),
+    ]
     shots = t.penalty_shot_goals(events, GAMES)
     # team 1 is home: 1010 = away goalie 1, away skaters 0, home skaters 1, home goalie 0 -> home shot.
     # For team 2 (away) 0101 is the away shot, while 1010 is not a shot for the away team.
@@ -117,18 +191,26 @@ def test_penalty_shot_goals_are_found_from_the_situation_code_for_either_side():
 
 
 def test_stint_strength_uses_the_stint_that_ends_on_the_second():
-    stints = [{"start_game_seconds": 0, "end_game_seconds": 100, "home_strength": "ev", "away_strength": "ev"},
-              {"start_game_seconds": 100, "end_game_seconds": 200, "home_strength": "sh", "away_strength": "pp"}]
+    stints = [
+        {"start_game_seconds": 0, "end_game_seconds": 100, "home_strength": "ev", "away_strength": "ev"},
+        {"start_game_seconds": 100, "end_game_seconds": 200, "home_strength": "sh", "away_strength": "pp"},
+    ]
     assert t.stint_strength(stints, 100, True) == "ev"
     assert t.stint_strength(stints, 101, True) == "sh" and t.stint_strength(stints, 101, False) == "pp"
     assert t.stint_strength(stints, 500, True) is None
 
 
 def test_only_shorthanded_penalty_shot_goals_are_added_to_shorthanded_goals():
-    stints = {1: [{"start_game_seconds": 0, "end_game_seconds": 300, "home_strength": "sh", "away_strength": "pp"},
-                  {"start_game_seconds": 300, "end_game_seconds": 600, "home_strength": "pp", "away_strength": "sh"}]}
-    shots = [{"game_id": 1, "game_seconds": 100, "team_id": 1, "is_home": True},   # home shorthanded: counts
-             {"game_id": 1, "game_seconds": 400, "team_id": 1, "is_home": True}]   # home on the power play: does not
+    stints = {
+        1: [
+            {"start_game_seconds": 0, "end_game_seconds": 300, "home_strength": "sh", "away_strength": "pp"},
+            {"start_game_seconds": 300, "end_game_seconds": 600, "home_strength": "pp", "away_strength": "sh"},
+        ]
+    }
+    shots = [
+        {"game_id": 1, "game_seconds": 100, "team_id": 1, "is_home": True},  # home shorthanded: counts
+        {"game_id": 1, "game_seconds": 400, "team_id": 1, "is_home": True},
+    ]  # home on the power play: does not
     counts = t.shorthanded_penalty_shot_goals(shots, stints)
     assert counts == {(1, 1): 1}
     rows = {(r["game_id"], r["team_id"]): r for r in t.build_team_game_rows(GAMES, [], [], counts)}
@@ -140,8 +222,10 @@ def test_shorthanded_penalty_shot_attempts_carry_the_shooter_and_the_strength():
     import special_teams as sp
 
     stints = {1: [{"start_game_seconds": 0, "end_game_seconds": 300, "home_strength": "sh", "away_strength": "pp"}]}
-    events = [{**event("1010", team=1, second=100), "event_id": 7, "scoring_player_id": 99},
-              {**event("1010", team=1, second=400), "event_id": 8, "scoring_player_id": 98}]
+    events = [
+        {**event("1010", team=1, second=100), "event_id": 7, "scoring_player_id": 99},
+        {**event("1010", team=1, second=400), "event_id": 8, "scoring_player_id": 98},
+    ]
     attempts = t.shorthanded_penalty_shot_attempts(t.penalty_shot_goals(events, GAMES), stints)
     assert [(a["shooter_id"], a["event_id"], a["strength"]) for a in attempts] == [(99, 7, "sh")]
     counts = sp.individual_counts_from_code(attempts, {})

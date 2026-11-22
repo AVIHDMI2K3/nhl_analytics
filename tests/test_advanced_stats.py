@@ -8,9 +8,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import advanced_stats  # noqa: E402
 import base_tables  # noqa: E402
@@ -45,7 +43,9 @@ def test_situations_of_a_state():
 
 
 def test_counts_of_a_row():
-    row = state_row(for_goal=1, for_sog=2, for_miss=3, for_block=4, against_sog=5, ind_goal=1, ind_block=2, blocks_made=3)
+    row = state_row(
+        for_goal=1, for_sog=2, for_miss=3, for_block=4, against_sog=5, ind_goal=1, ind_block=2, blocks_made=3
+    )
     counts = advanced_stats.counts_of(row, True)
     assert (counts["cf"], counts["ff"], counts["sf"], counts["gf"]) == (10, 6, 3, 1)
     assert (counts["ca"], counts["sa"], counts["ga"]) == (5, 5, 0)
@@ -95,8 +95,14 @@ def test_rates_from_sums_and_none_when_the_divisor_is_zero():
 
 
 def season(player, team, first, games=10, position="C"):
-    return {"player_id": player, "team_id": team, "name": f"P{player}", "position": position,
-            "games_played": games, "first_game_date": first}
+    return {
+        "player_id": player,
+        "team_id": team,
+        "name": f"P{player}",
+        "position": position,
+        "games_played": games,
+        "first_game_date": first,
+    }
 
 
 def test_a_traded_player_gets_a_combined_row_per_situation():
@@ -109,7 +115,11 @@ def test_a_traded_player_gets_a_combined_row_per_situation():
         del r["player_id"]
     totals, games = totals_for(player_rows, team_rows)
     rows = advanced_stats.build_advanced_display(
-        totals, games, [season(11, 2, "2025-12-01", 4), season(11, 1, "2025-10-01", 6)], {11: "Eleven"}, {1: "AAA", 2: "BBB"}
+        totals,
+        games,
+        [season(11, 2, "2025-12-01", 4), season(11, 1, "2025-10-01", 6)],
+        {11: "Eleven"},
+        {1: "AAA", 2: "BBB"},
     )
     five = [(r["kind"], r["team"]) for r in rows if r["situation"] == "5v5"]
     assert five == [("total", "TOT"), ("team", "AAA"), ("team", "BBB")]

@@ -57,8 +57,7 @@ def event_counts_sql(events):
 
 def boxscore_counts_sql(boxscore):
     parts = [
-        f"select game_id, player_id, '{stat}' as stat, {stat} as n "
-        f"from '{boxscore}' where {stat} is not null"
+        f"select game_id, player_id, '{stat}' as stat, {stat} as n from '{boxscore}' where {stat} is not null"
         for stat in EVENT_STATS
     ]
     return " union all ".join(parts)
@@ -133,9 +132,7 @@ def compare_shifts(season):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compare our per-player counts with the official boxscore."
-    )
+    parser = argparse.ArgumentParser(description="Compare our per-player counts with the official boxscore.")
     parser.add_argument("--season", type=int, required=True)
     args = parser.parse_args()
     compare_event_counts(args.season)

@@ -9,8 +9,14 @@ import inspect_goal_strength as inspect_goals  # noqa: E402
 
 
 def stint(start, end, home=5, away=4, home_strength="ev", away_strength="ev"):
-    return {"start_game_seconds": start, "end_game_seconds": end, "home_real_skaters": home,
-            "away_real_skaters": away, "home_strength": home_strength, "away_strength": away_strength}
+    return {
+        "start_game_seconds": start,
+        "end_game_seconds": end,
+        "home_real_skaters": home,
+        "away_real_skaters": away,
+        "home_strength": home_strength,
+        "away_strength": away_strength,
+    }
 
 
 def test_a_goal_belongs_to_the_stint_that_ends_on_its_second():

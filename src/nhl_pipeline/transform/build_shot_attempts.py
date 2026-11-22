@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from shot_attempts import ATTEMPT_TYPES, build_game_shot_attempts
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -66,13 +65,32 @@ SCHEMA = [
 ]
 
 EVENT_COLUMNS = [
-    "game_id", "event_id", "sort_order", "period", "period_type", "seconds_in_period",
-    "game_seconds", "event_type", "situation_code", "event_owner_team_id", "x_coord",
-    "y_coord", "zone_code", "shot_type", "shooting_player_id", "scoring_player_id",
-    "goalie_in_net_id", "blocking_player_id", "home_defending_side",
+    "game_id",
+    "event_id",
+    "sort_order",
+    "period",
+    "period_type",
+    "seconds_in_period",
+    "game_seconds",
+    "event_type",
+    "situation_code",
+    "event_owner_team_id",
+    "x_coord",
+    "y_coord",
+    "zone_code",
+    "shot_type",
+    "shooting_player_id",
+    "scoring_player_id",
+    "goalie_in_net_id",
+    "blocking_player_id",
+    "home_defending_side",
 ]
 ON_ICE_COLUMNS = [
-    "game_id", "event_id", "home_skater_ids", "away_skater_ids", "matches_situation",
+    "game_id",
+    "event_id",
+    "home_skater_ids",
+    "away_skater_ids",
+    "matches_situation",
     "uses_conflicting_shift",
 ]
 
@@ -153,9 +171,7 @@ def main():
         for game_id, home, away in zip(*game_columns.values())
     }
     events = read_columns(staging / "events.parquet", EVENT_COLUMNS)
-    on_ice = read_columns(
-        args.intermediate_root / f"season={args.season}" / "event_on_ice.parquet", ON_ICE_COLUMNS
-    )
+    on_ice = read_columns(args.intermediate_root / f"season={args.season}" / "event_on_ice.parquet", ON_ICE_COLUMNS)
     box_columns = read_columns(
         staging / "boxscore_players.parquet", ["game_id", "player_id", "player_group", "goals", "sog"]
     )

@@ -71,25 +71,32 @@ def main():
     if not missing:
         print(f"Season {args.season}: no games with shift_status '{MISSING_STATUS}'. Nothing to do.")
         return
-    print(f"Season {args.season}: {len(missing)} games without API shifts "
-          f"({'will write' if args.write else 'report only'})")
+    print(
+        f"Season {args.season}: {len(missing)} games without API shifts "
+        f"({'will write' if args.write else 'report only'})"
+    )
 
     shifts = pq.read_table(staging / "shifts.parquet")
     pairs = shifts.group_by("team_id").aggregate([("team", "min")]).to_pylist()
     abbrevs = {row["team_id"]: row["team_min"] for row in pairs}
-    box = pq.read_table(staging / "boxscore_players.parquet",
-                        columns=["game_id", "team_id", "home_or_away", "player_id", "sweater_number", "toi_seconds"])
+    box = pq.read_table(
+        staging / "boxscore_players.parquet",
+        columns=["game_id", "team_id", "home_or_away", "player_id", "sweater_number", "toi_seconds"],
+    )
     by_id = {r["game_id"]: r for r in rows}
     loaded, new_rows = [], []
     for game_id in missing:
         players = pc.filter(box, pc.equal(box["game_id"], game_id)).to_pylist()
         team_ids = {"home": by_id[game_id]["home_team_id"], "away": by_id[game_id]["away_team_id"]}
         game_rows, problems = build_game(
-            game_id, players, team_ids, abbrevs, lambda side, g=game_id: fetch(g, side, args.pause))
+            game_id, players, team_ids, abbrevs, lambda side, g=game_id: fetch(g, side, args.pause)
+        )
         bad = bool(problems["unmatched"] or problems["toi"])
         status = "PROBLEM" if bad else "ok"
-        print(f"{game_id}: {len(game_rows):4d} shifts  {status}"
-              + (f"  unmatched {problems['unmatched']}  toi differences {problems['toi'][:4]}" if bad else ""))
+        print(
+            f"{game_id}: {len(game_rows):4d} shifts  {status}"
+            + (f"  unmatched {problems['unmatched']}  toi differences {problems['toi'][:4]}" if bad else "")
+        )
         if not bad or game_id in args.force:
             loaded.append(game_id)
             names = {t: abbrevs.get(t) for t in team_ids.values()}

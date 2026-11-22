@@ -8,9 +8,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "transform"))
 
 import build_stints  # noqa: E402
 import stints  # noqa: E402
@@ -20,8 +18,13 @@ GAME = {"game_id": 1, "home_team_id": 1, "away_team_id": 2}
 
 def shift(player, team, start, end, period=1, goalie=False):
     return {
-        "game_id": 1, "player_id": player, "team_id": team, "period": period,
-        "start_game_seconds": start, "end_game_seconds": end, "is_goalie": goalie,
+        "game_id": 1,
+        "player_id": player,
+        "team_id": team,
+        "period": period,
+        "start_game_seconds": start,
+        "end_game_seconds": end,
+        "is_goalie": goalie,
     }
 
 
@@ -103,9 +106,7 @@ def test_code_steps_previous_and_next():
 def test_seconds_by_strength_adds_up_per_player():
     rows = full_ice(0, 60) + full_ice(60, 100, home=range(16, 20))  # then home is a man down
     result = stints.build_stints(GAME, rows)
-    totals = stints.seconds_by_strength(
-        result, lambda stint, side: stints.strength_from_shifts(stint, side)
-    )
+    totals = stints.seconds_by_strength(result, lambda stint, side: stints.strength_from_shifts(stint, side))
     assert totals[(11, "ev")] == 60 and totals[(11, "sh")] == 0
     assert totals[(16, "sh")] == 40
     assert totals[(21, "ev")] == 60 and totals[(21, "pp")] == 40
@@ -133,9 +134,7 @@ def test_long_stretches_are_not_smoothed():
     rows = [r for r in rows if not (r["player_id"] in (10, 40) and r["start_game_seconds"] != 0)]
     rows += [shift(10, 1, 60, 160, goalie=True), shift(40, 2, 60, 160, goalie=True)]
     result = stints.build_stints(GAME, rows)
-    smoothed = stints.smoothed_label_for(
-        result, lambda stint, side: stints.strength_from_shifts(stint, side), 5
-    )
+    smoothed = stints.smoothed_label_for(result, lambda stint, side: stints.strength_from_shifts(stint, side), 5)
     assert [smoothed(s, "home") for s in result] == ["ev", "pp", "ev"]
 
 

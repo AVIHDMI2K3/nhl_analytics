@@ -87,10 +87,7 @@ def list_season_games(fetcher, start, end, on_week=None):
     for _ in range(MAX_WEEKS):
         response = fetcher.get(schedule_url(date))
         if response.status_code != 200:
-            raise RuntimeError(
-                f"Schedule call failed with HTTP {response.status_code}: "
-                f"{schedule_url(date)}"
-            )
+            raise RuntimeError(f"Schedule call failed with HTTP {response.status_code}: {schedule_url(date)}")
         if on_week:
             on_week(date, response.content)
         data = json.loads(response.content)
@@ -149,20 +146,12 @@ def fetch_one(fetcher, raw_root, season, game_id, name, url, params, log_path):
     except ValueError:
         log_event(log_path, **log, status="invalid", detail="response is not JSON")
         return None
-    if (
-        name == "shiftcharts"
-        and isinstance(data, dict)
-        and data.get("data") == []
-    ):
-        write_empty_marker(
-            raw_root, season, game_id, datetime.now(timezone.utc).isoformat(timespec="seconds")
-        )
+    if name == "shiftcharts" and isinstance(data, dict) and data.get("data") == []:
+        write_empty_marker(raw_root, season, game_id, datetime.now(timezone.utc).isoformat(timespec="seconds"))
         log_event(log_path, **log, status="empty", detail="NHL returned no shift rows")
         return "empty"
     if not VALIDATORS[name](data):
-        log_event(
-            log_path, **log, status="invalid", detail="empty or missing expected fields"
-        )
+        log_event(log_path, **log, status="invalid", detail="empty or missing expected fields")
         return None
     write_gz_atomic(raw_path(raw_root, season, game_id, name), response.content)
     if name == "shiftcharts":
@@ -182,32 +171,20 @@ def ingest_game(fetcher, raw_root, season, game_id, log_path, recheck_empty=Fals
     for name, url, params in game_requests(game_id):
         if raw_path(raw_root, season, game_id, name).exists():
             continue
-        if (
-            name == "shiftcharts"
-            and has_empty_marker(raw_root, season, game_id)
-            and not recheck_empty
-        ):
+        if name == "shiftcharts" and has_empty_marker(raw_root, season, game_id) and not recheck_empty:
             continue
-        if fetch_one(
-            fetcher, raw_root, season, game_id, name, url, params, log_path
-        ) is None:
+        if fetch_one(fetcher, raw_root, season, game_id, name, url, params, log_path) is None:
             complete = False
     return complete
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Download the raw NHL files for one regular season."
-    )
-    parser.add_argument(
-        "--season", type=int, required=True, help="start year, e.g. 2023 for 2023-24"
-    )
+    parser = argparse.ArgumentParser(description="Download the raw NHL files for one regular season.")
+    parser.add_argument("--season", type=int, required=True, help="start year, e.g. 2023 for 2023-24")
     parser.add_argument("--start", help="first schedule date; default Oct 1 of the season")
     parser.add_argument("--end", help="last schedule date; default Apr 30 of the next year")
     parser.add_argument("--limit", type=int, help="try at most this many games this run")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="list the games, download nothing"
-    )
+    parser.add_argument("--dry-run", action="store_true", help="list the games, download nothing")
     parser.add_argument(
         "--states",
         default=",".join(FINISHED_STATES),
@@ -257,17 +234,12 @@ def main():
         if not game_is_complete(args.raw_root, args.season, g)
         or (args.recheck_empty and has_empty_marker(args.raw_root, args.season, g))
     ]
-    no_shifts = [
-        g for g in selected if has_empty_marker(args.raw_root, args.season, g)
-    ]
+    no_shifts = [g for g in selected if has_empty_marker(args.raw_root, args.season, g)]
 
     print(f"Games in the schedule responses: {len(games)}")
     print(f"Regular-season games for {args.season}: {len(regular)}")
     print(f"  gameState counts: {dict(Counter(i['state'] for i in regular.values()))}")
-    print(
-        "  gameScheduleState counts: "
-        f"{dict(Counter(i['schedule_state'] for i in regular.values()))}"
-    )
+    print(f"  gameScheduleState counts: {dict(Counter(i['schedule_state'] for i in regular.values()))}")
     print(f"Selected as finished: {len(selected)} (states: {', '.join(states)})")
     print(f"Already complete on disk: {len(selected) - len(todo)}")
     print(f"  with no shift data (NHL returns none): {len(no_shifts)}")
@@ -308,10 +280,7 @@ def main():
         print("\nInterrupted. Rerun the same command to resume.")
 
     minutes = (time.monotonic() - started) / 60
-    print(
-        f"\nFinished in {minutes:.1f} min: {downloaded} downloaded, "
-        f"{len(incomplete)} incomplete."
-    )
+    print(f"\nFinished in {minutes:.1f} min: {downloaded} downloaded, {len(incomplete)} incomplete.")
     still_empty = sum(has_empty_marker(args.raw_root, args.season, g) for g in selected)
     print(f"Games with no shift data from the NHL: {still_empty}")
     if incomplete:

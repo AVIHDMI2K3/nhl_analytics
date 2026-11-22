@@ -6,9 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import pytest  # noqa: E402
-
 import export_app_data as ex  # noqa: E402
+import pytest  # noqa: E402
 
 
 def make_sources(metrics, seasons, skip=()):
@@ -22,8 +21,10 @@ def make_sources(metrics, seasons, skip=()):
 def test_plan_has_every_table_for_every_season_plus_similarity(tmp_path):
     pairs = ex.plan_copies([2024, 2025], tmp_path / "m", tmp_path / "a")
     assert len(pairs) == 2 * len(ex.SEASON_TABLES) + len(ex.ALL_SEASON_TABLES)
-    assert (tmp_path / "m" / "season=2025" / "team_season_app.parquet",
-            tmp_path / "a" / "season=2025" / "team_season_app.parquet") in pairs
+    assert (
+        tmp_path / "m" / "season=2025" / "team_season_app.parquet",
+        tmp_path / "a" / "season=2025" / "team_season_app.parquet",
+    ) in pairs
     assert (tmp_path / "m" / "player_similarity.parquet", tmp_path / "a" / "player_similarity.parquet") in pairs
 
 

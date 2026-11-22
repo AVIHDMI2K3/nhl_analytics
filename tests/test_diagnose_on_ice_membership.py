@@ -15,8 +15,15 @@ def stint(start, end, home, away):
 
 
 def goal(time, home=True, sf=5, sa=4, gf=1, ga=1):
-    return {"game_id": 1, "game_seconds": time, "is_home": home, "skaters_for": sf, "skaters_against": sa,
-            "goalie_for": gf, "goalie_against": ga}
+    return {
+        "game_id": 1,
+        "game_seconds": time,
+        "is_home": home,
+        "skaters_for": sf,
+        "skaters_against": sa,
+        "goalie_for": gf,
+        "goalie_against": ga,
+    }
 
 
 STINTS = {1: [stint(0, 60, [1, 2], [11, 12]), stint(60, 120, [1, 3], [11, 12])]}
@@ -48,9 +55,11 @@ def test_goals_that_are_not_power_play_goals_are_ignored():
 
 def test_explain_counts_gaps_that_line_change_goals_could_close():
     counts = d.membership_counts(STINTS, [goal(60)], window=0)
-    reference = {2: {"ppGoalsForPer60": 0.0, "ppTimeOnIce": 3600},   # NHL 0, ours 1, lost 1 -> explained
-                 3: {"ppGoalsForPer60": 1.0, "ppTimeOnIce": 3600},   # NHL 1, ours 0, extra 1 -> explained
-                 1: {"ppGoalsForPer60": 1.0, "ppTimeOnIce": 3600},   # exact
-                 9: {"ppGoalsForPer60": 2.0, "ppTimeOnIce": 3600}}   # NHL 2, ours 0, nothing movable
+    reference = {
+        2: {"ppGoalsForPer60": 0.0, "ppTimeOnIce": 3600},  # NHL 0, ours 1, lost 1 -> explained
+        3: {"ppGoalsForPer60": 1.0, "ppTimeOnIce": 3600},  # NHL 1, ours 0, extra 1 -> explained
+        1: {"ppGoalsForPer60": 1.0, "ppTimeOnIce": 3600},  # exact
+        9: {"ppGoalsForPer60": 2.0, "ppTimeOnIce": 3600},
+    }  # NHL 2, ours 0, nothing movable
     s = d.explain(counts, reference, "pp", [1, 2, 3, 9])
     assert (s["skaters"], s["exact"], s["differ"], s["explained"], s["none_movable"]) == (4, 1, 3, 2, 1)

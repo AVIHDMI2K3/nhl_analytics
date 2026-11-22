@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from advanced_stats import ON_ICE, TEAM_RATE_COLUMNS, build_team_advanced_counts, build_team_advanced_display
 from build_season_display import team_abbrevs
 
@@ -27,8 +26,14 @@ STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 REGULAR_SEASON = 2
 SCHEMA = pa.schema(
-    [("season", pa.int64()), ("team_id", pa.int64()), ("team", pa.string()), ("situation", pa.string()),
-     ("games_played", pa.int64()), ("games_included", pa.int64())]
+    [
+        ("season", pa.int64()),
+        ("team_id", pa.int64()),
+        ("team", pa.string()),
+        ("situation", pa.string()),
+        ("games_played", pa.int64()),
+        ("games_included", pa.int64()),
+    ]
     + [(column, pa.int64()) for column in ON_ICE]
     + [(column, pa.float64()) for column in TEAM_RATE_COLUMNS]
 )
@@ -73,8 +78,10 @@ def main():
     five = sorted((r for r in rows if r["situation"] == "5v5"), key=lambda r: -r["cf_pct"])
     print("\n5v5 Corsi % by team (best five and worst five):")
     for r in five[:5] + five[-5:]:
-        print(f"  {r['team']:4s} GP {r['games_played']:3d}/{r['games_included']:3d}  CF {r['cf']:5d} CA {r['ca']:5d}  "
-              f"CF% {r['cf_pct']:5.1f}  GF {r['gf']:3d} GA {r['ga']:3d}")
+        print(
+            f"  {r['team']:4s} GP {r['games_played']:3d}/{r['games_included']:3d}  CF {r['cf']:5d} CA {r['ca']:5d}  "
+            f"CF% {r['cf_pct']:5.1f}  GF {r['gf']:3d} GA {r['ga']:3d}"
+        )
 
 
 if __name__ == "__main__":

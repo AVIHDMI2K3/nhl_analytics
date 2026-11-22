@@ -10,7 +10,8 @@ Writes data/metrics/player_similarity.parquet   for each skater-season in the po
 
 mode = same_season: the closest players of the same season; all_seasons: the closest player-seasons of any season.
 A player's own other seasons are never matches, so every match is a different player. Forwards are only matched with
-forwards and defensemen with defensemen. similarity is 100 minus the average gap in percentile points, with every category of
+forwards and defensemen with defensemen. similarity is 100 minus the average gap in percentile points, with
+every category of
 stats weighted equally; the gap_* columns show the gap per category. See similarity.py.
 """
 
@@ -19,21 +20,29 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from similarity import CATEGORIES, build_entries, nearest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 DEFAULT_TOP_N = 15
 SCHEMA = pa.schema(
-    [("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position_group", pa.string()),
-     ("mode", pa.string()), ("rank", pa.int64()), ("other_season", pa.int64()), ("other_player_id", pa.int64()),
-     ("other_name", pa.string()), ("other_team", pa.string()), ("other_position", pa.string()),
-     ("similarity", pa.float64())]
+    [
+        ("season", pa.int64()),
+        ("player_id", pa.int64()),
+        ("name", pa.string()),
+        ("position_group", pa.string()),
+        ("mode", pa.string()),
+        ("rank", pa.int64()),
+        ("other_season", pa.int64()),
+        ("other_player_id", pa.int64()),
+        ("other_name", pa.string()),
+        ("other_team", pa.string()),
+        ("other_position", pa.string()),
+        ("similarity", pa.float64()),
+    ]
     + [(f"gap_{category}", pa.float64()) for category in CATEGORIES]
 )
-SHORT = {"scoring": "scoring", "shot_share": "share", "shot_volume": "volume", "physical": "physical",
-         "usage": "usage"}
+SHORT = {"scoring": "scoring", "shot_share": "share", "shot_volume": "volume", "physical": "physical", "usage": "usage"}
 SAMPLES = (("McDavid", 2024), ("Makar", 2024), ("Matthews", 2023), ("Quinn Hughes", 2024))
 
 
@@ -65,8 +74,10 @@ def main():
                 print(f"\n  {entry['name']} {season} ({entry['team']}) - closest, {mode.replace('_', ' ')}")
                 for r in mine:
                     gaps = " ".join(f"{SHORT[c]} {r[f'gap_{c}']:.0f}" for c in CATEGORIES if r[f"gap_{c}"] is not None)
-                    print(f"    {r['rank']}. {r['other_name']:<22} {r['other_season']} {r['other_team']:<4} "
-                          f"{r['similarity']:.1f}   gaps: {gaps}")
+                    print(
+                        f"    {r['rank']}. {r['other_name']:<22} {r['other_season']} {r['other_team']:<4} "
+                        f"{r['similarity']:.1f}   gaps: {gaps}"
+                    )
 
 
 if __name__ == "__main__":

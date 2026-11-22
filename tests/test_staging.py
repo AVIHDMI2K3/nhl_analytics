@@ -10,9 +10,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "ingest")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "ingest"))
 
 import rawstore  # noqa: E402
 import stage_season  # noqa: E402
@@ -54,14 +52,34 @@ def pbp_fixture():
         ],
         "plays": [
             play(1, 1, "00:00", "faceoff", HOME, xCoord=0, yCoord=0, zoneCode="N"),
-            play(2, 1, "11:39", "shot-on-goal", HOME, xCoord=60.0, yCoord=-5,
-                 shootingPlayerId=1, shotType="wrist", goalieInNetId=99),
+            play(
+                2,
+                1,
+                "11:39",
+                "shot-on-goal",
+                HOME,
+                xCoord=60.0,
+                yCoord=-5,
+                shootingPlayerId=1,
+                shotType="wrist",
+                goalieInNetId=99,
+            ),
             play(3, 2, "05:00", "goal", HOME, scoringPlayerId=1, awaySOG=4, homeSOG=6),
             play(4, 3, "19:59", "goal", AWAY, scoringPlayerId=2),
             play(5, 4, "01:00", "goal", HOME, scoringPlayerId=1),
             play(6, 5, "00:00", "goal", HOME, scoringPlayerId=1),  # shootout attempt
-            play(7, 1, "12:00", "penalty", AWAY, descKey="tripping", typeCode="MIN",
-                 duration=2, committedByPlayerId=2, someNewField="x"),
+            play(
+                7,
+                1,
+                "12:00",
+                "penalty",
+                AWAY,
+                descKey="tripping",
+                typeCode="MIN",
+                duration=2,
+                committedByPlayerId=2,
+                someNewField="x",
+            ),
         ],
     }
 
@@ -80,7 +98,11 @@ def test_clock_to_seconds_handles_good_and_bad_values():
 
 def test_period_start_seconds_for_regular_season_clock():
     assert [staging.period_start_seconds(p) for p in (1, 2, 3, 4, 5)] == [
-        0, 1200, 2400, 3600, 3900,
+        0,
+        1200,
+        2400,
+        3600,
+        3900,
     ]
     assert staging.period_start_seconds(None) is None
 
@@ -119,8 +141,7 @@ def test_other_row_types_match_their_schemas():
     assert set(player) == {n for n, _ in stage_season.SCHEMAS["players"]}
     game = staging.parse_schedule_week(schedule_fixture())[0]
     expected = {n for n, _ in stage_season.SCHEMAS["games"]}
-    extra = {"has_events", "has_boxscore", "shift_status", "goals_check",
-             "shifts_backwards", "shifts_overlapping"}
+    extra = {"has_events", "has_boxscore", "shift_status", "goals_check", "shifts_backwards", "shifts_overlapping"}
     assert set(game) == expected - extra
 
 
@@ -169,12 +190,14 @@ def test_shifts_drop_goal_markers_and_convert_times():
 
 
 def test_check_shifts_finds_backwards_and_overlapping():
-    data = {"data": [
-        shift_item(1, 1, "00:10", "00:50"),
-        shift_item(2, 1, "00:40", "01:20"),  # overlaps shift 1
-        shift_item(3, 1, "02:00", "01:30"),  # ends before it starts
-        shift_item(4, 1, "00:10", "00:50", player=2),  # other player, fine
-    ]}
+    data = {
+        "data": [
+            shift_item(1, 1, "00:10", "00:50"),
+            shift_item(2, 1, "00:40", "01:20"),  # overlaps shift 1
+            shift_item(3, 1, "02:00", "01:30"),  # ends before it starts
+            shift_item(4, 1, "00:10", "00:50", player=2),  # other player, fine
+        ]
+    }
     found = staging.check_shifts(staging.parse_shifts(GAME, data))
     assert found == {"backwards": 1, "overlaps": 1}
 
@@ -188,8 +211,9 @@ def test_boxscore_players_flatten_names_and_add_toi_seconds():
         "awayTeam": {"id": AWAY},
         "playerByGameStats": {
             "homeTeam": {
-                "forwards": [{"playerId": 1, "name": {"default": "B. Tkachuk"}, "goals": 1,
-                              "powerPlayGoals": 0, "toi": "18:30"}],
+                "forwards": [
+                    {"playerId": 1, "name": {"default": "B. Tkachuk"}, "goals": 1, "powerPlayGoals": 0, "toi": "18:30"}
+                ],
                 "goalies": [{"playerId": 99, "name": {"default": "L. Ullmark"}, "saves": 30}],
             },
             "awayTeam": {"defense": [{"playerId": 2, "goals": 0, "toi": "20:00"}]},
@@ -212,14 +236,18 @@ def test_boxscore_players_flatten_names_and_add_toi_seconds():
 def schedule_fixture():
     def game(game_id, home, away):
         return {
-            "id": game_id, "season": 20232024, "gameType": 2,
+            "id": game_id,
+            "season": 20232024,
+            "gameType": 2,
             "startTimeUTC": "2023-10-10T23:00:00Z",
-            "gameState": "OFF", "gameScheduleState": "OK",
+            "gameState": "OFF",
+            "gameScheduleState": "OK",
             "homeTeam": {"id": HOME, "abbrev": "OTT", "score": home},
             "awayTeam": {"id": AWAY, "abbrev": "FLA", "score": away},
             "periodDescriptor": {"number": 5},
             "gameOutcome": {"lastPeriodType": "SO"},
         }
+
     return {"gameWeek": [{"date": "2023-10-10", "games": [game(GAME, 4, 3)]}]}
 
 
@@ -257,13 +285,16 @@ def test_coerce_rows_fixes_types_without_changing_values():
 
 def test_stage_game_reads_raw_files_and_flags_missing_shifts(tmp_path):
     root = tmp_path / "raw"
-    rawstore.write_gz_atomic(
-        rawstore.raw_path(root, 2023, GAME, "play-by-play"), json.dumps(pbp_fixture()).encode()
-    )
+    rawstore.write_gz_atomic(rawstore.raw_path(root, 2023, GAME, "play-by-play"), json.dumps(pbp_fixture()).encode())
     rawstore.write_gz_atomic(
         rawstore.raw_path(root, 2023, GAME, "boxscore"),
-        json.dumps({"homeTeam": {"id": HOME}, "awayTeam": {"id": AWAY},
-                    "playerByGameStats": {"homeTeam": {"forwards": [{"playerId": 1}]}}}).encode(),
+        json.dumps(
+            {
+                "homeTeam": {"id": HOME},
+                "awayTeam": {"id": AWAY},
+                "playerByGameStats": {"homeTeam": {"forwards": [{"playerId": 1}]}},
+            }
+        ).encode(),
     )
     schedule_row = staging.parse_schedule_week(schedule_fixture())[0]
     schedule_row.update(home_score=3, away_score=1)
@@ -291,8 +322,14 @@ def test_parquet_round_trip(tmp_path):
     for table in stage_season.SCHEMAS:  # every schema must build, including games
         stage_season.arrow_schema(table)
     game = staging.parse_schedule_week(schedule_fixture())[0]
-    game.update(has_events=True, has_boxscore=False, shift_status="ok", goals_check=None,
-                shifts_backwards=None, shifts_overlapping=None)
+    game.update(
+        has_events=True,
+        has_boxscore=False,
+        shift_status="ok",
+        goals_check=None,
+        shifts_backwards=None,
+        shifts_overlapping=None,
+    )
     games_writer = stage_season.TableWriter(tmp_path / "games.parquet", "games")
     games_writer.write([game])
     games_writer.close()

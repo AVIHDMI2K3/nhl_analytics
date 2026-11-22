@@ -9,9 +9,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "ingest")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "nhl_pipeline" / "ingest"))
 
 import endpoints  # noqa: E402
 import ingest_season  # noqa: E402
@@ -49,12 +47,8 @@ def shifts_key(game_id):
 def good_routes(game_id):
     web = endpoints.WEB_BASE
     return {
-        (f"{web}/gamecenter/{game_id}/play-by-play", ()): FakeResponse(
-            {"plays": [{"typeDescKey": "goal"}]}
-        ),
-        (f"{web}/gamecenter/{game_id}/boxscore", ()): FakeResponse(
-            {"playerByGameStats": {}}
-        ),
+        (f"{web}/gamecenter/{game_id}/play-by-play", ()): FakeResponse({"plays": [{"typeDescKey": "goal"}]}),
+        (f"{web}/gamecenter/{game_id}/boxscore", ()): FakeResponse({"playerByGameStats": {}}),
         shifts_key(game_id): FakeResponse({"data": [{"id": 1}], "total": 1}),
     }
 
@@ -159,9 +153,7 @@ def test_http_error_is_logged_and_the_game_stays_incomplete(tmp_path):
     box_key = (f"{endpoints.WEB_BASE}/gamecenter/{GAME}/boxscore", ())
     routes[box_key] = FakeResponse(status=404, raw=b"{}")
 
-    assert (
-        ingest_season.ingest_game(FakeFetcher(routes), tmp_path, 2023, GAME, log) is False
-    )
+    assert ingest_season.ingest_game(FakeFetcher(routes), tmp_path, 2023, GAME, log) is False
     box_events = [r for r in read_log(log) if r["endpoint"] == "boxscore"]
     assert [r["status"] for r in box_events] == ["http_404"]
     assert not rawstore.game_is_complete(tmp_path, 2023, GAME)
@@ -195,9 +187,7 @@ def test_schedule_walk_follows_next_start_date_and_stops_after_end():
     }
     fetcher = FakeFetcher(routes)
     seen = []
-    games = ingest_season.list_season_games(
-        fetcher, "2023-10-01", "2023-10-14", on_week=lambda d, c: seen.append(d)
-    )
+    games = ingest_season.list_season_games(fetcher, "2023-10-01", "2023-10-14", on_week=lambda d, c: seen.append(d))
     assert sorted(games) == [2023020001, 2023020002]
     assert games[2023020002]["state"] == "FUT"
     assert len(fetcher.calls) == 2
@@ -205,9 +195,7 @@ def test_schedule_walk_follows_next_start_date_and_stops_after_end():
 
 
 def test_schedule_walk_raises_on_http_error():
-    fetcher = FakeFetcher(
-        {(endpoints.schedule_url("2023-10-01"), ()): FakeResponse(status=500, raw=b"")}
-    )
+    fetcher = FakeFetcher({(endpoints.schedule_url("2023-10-01"), ()): FakeResponse(status=500, raw=b"")})
     try:
         ingest_season.list_season_games(fetcher, "2023-10-01", "2023-10-14")
     except RuntimeError as exc:

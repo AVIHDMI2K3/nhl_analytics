@@ -79,9 +79,7 @@ class Fetcher:
         self._last_start = self._clock()
 
     @retry(
-        retry=retry_if_exception_type(
-            (requests.ConnectionError, requests.Timeout, RetryableHTTPError)
-        ),
+        retry=retry_if_exception_type((requests.ConnectionError, requests.Timeout, RetryableHTTPError)),
         stop=stop_after_attempt(4),
         wait=wait_exponential(multiplier=1, min=1, max=10),
         reraise=True,

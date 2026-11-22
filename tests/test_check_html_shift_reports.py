@@ -15,6 +15,8 @@ def test_report_urls_follow_the_season_and_game_number():
 
 
 def test_players_and_shift_rows_are_counted():
-    html = ('<td class="playerHeading + border">8 SMITH, A</td><tr><td>1</td><td>1</td><td>0:00 / 20:00</td></tr>'
-            '<td class="playerHeading">9 JONES, B</td><tr><td>2</td><td>1</td><td>1:10 / 18:50</td></tr>')
+    html = (
+        '<td class="playerHeading + border">8 SMITH, A</td><tr><td>1</td><td>1</td><td>0:00 / 20:00</td></tr>'
+        '<td class="playerHeading">9 JONES, B</td><tr><td>2</td><td>1</td><td>1:10 / 18:50</td></tr>'
+    )
     assert c.summarize(html) == (2, 2) and c.summarize("<html></html>") == (0, 0)

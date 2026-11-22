@@ -53,9 +53,10 @@ def count_faceoffs(events, games):
         other_team = game["away_team_id"] if home_won else game["home_team_id"]
         code = parse_situation_code(event["situation_code"])
         zone = event["zone_code"]
-        sides = (("home", "away") if home_won else ("away", "home"))
+        sides = ("home", "away") if home_won else ("away", "home")
         for player, team, side, player_zone, won in (
-            (winner, owner, sides[0], zone, True), (loser, other_team, sides[1], FLIP.get(zone), False),
+            (winner, owner, sides[0], zone, True),
+            (loser, other_team, sides[1], FLIP.get(zone), False),
         ):
             situations = ["all"]
             if code is not None:

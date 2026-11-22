@@ -70,8 +70,15 @@ def season_zone_rows(game_totals):
             totals[key].update(counts)
     rows = []
     for (team_id, unit_type, player_ids), c in sorted(totals.items()):
-        rows.append({
-            "team_id": team_id, "unit_type": unit_type, "player_ids": list(player_ids),
-            "oz": c["oz"], "dz": c["dz"], "nz": c["nz"], "oz_start_pct": oz_start_pct(c["oz"], c["dz"]),
-        })
+        rows.append(
+            {
+                "team_id": team_id,
+                "unit_type": unit_type,
+                "player_ids": list(player_ids),
+                "oz": c["oz"],
+                "dz": c["dz"],
+                "nz": c["nz"],
+                "oz_start_pct": oz_start_pct(c["oz"], c["dz"]),
+            }
+        )
     return rows

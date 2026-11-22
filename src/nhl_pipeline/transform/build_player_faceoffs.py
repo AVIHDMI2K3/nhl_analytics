@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from advanced_stats import build_advanced_display
 from build_season_display import full_names, team_abbrevs
 from faceoffs import COUNT_COLUMNS, RATE_COLUMNS, SITUATIONS, add_faceoff_rates, count_faceoffs
@@ -26,12 +25,28 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
 EVENT_COLUMNS = [
-    "game_id", "event_type", "event_owner_team_id", "zone_code", "situation_code", "winning_player_id", "losing_player_id",
+    "game_id",
+    "event_type",
+    "event_owner_team_id",
+    "zone_code",
+    "situation_code",
+    "winning_player_id",
+    "losing_player_id",
 ]
 SCHEMA = pa.schema(
-    [("season", pa.int64()), ("player_id", pa.int64()), ("name", pa.string()), ("position", pa.string()),
-     ("kind", pa.string()), ("team_id", pa.int64()), ("team", pa.string()), ("teams", pa.string()),
-     ("situation", pa.string()), ("games_played", pa.int64()), ("games_included", pa.int64())]
+    [
+        ("season", pa.int64()),
+        ("player_id", pa.int64()),
+        ("name", pa.string()),
+        ("position", pa.string()),
+        ("kind", pa.string()),
+        ("team_id", pa.int64()),
+        ("team", pa.string()),
+        ("teams", pa.string()),
+        ("situation", pa.string()),
+        ("games_played", pa.int64()),
+        ("games_included", pa.int64()),
+    ]
     + [(column, pa.int64()) for column in COUNT_COLUMNS]
     + [(column, pa.float64()) for column in RATE_COLUMNS]
 )
@@ -52,15 +67,25 @@ def main():
 
     metrics = args.metrics_root / f"season={args.season}"
     staging = args.staging_root / f"season={args.season}"
-    games = {g["game_id"]: g for g in pq.read_table(
-        staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]).to_pylist()}
+    games = {
+        g["game_id"]: g
+        for g in pq.read_table(
+            staging / "games.parquet", columns=["game_id", "home_team_id", "away_team_id"]
+        ).to_pylist()
+    }
     events = pq.read_table(staging / "events.parquet", columns=EVENT_COLUMNS).to_pylist()
     season_rows = pq.read_table(metrics / "player_season_totals.parquet").to_pylist()
 
     totals, played, skipped = count_faceoffs(events, games)
     rows = build_advanced_display(
-        totals, played, season_rows, full_names(staging), team_abbrevs(staging),
-        situations=SITUATIONS, columns=COUNT_COLUMNS, add_rates_to=add_faceoff_rates,
+        totals,
+        played,
+        season_rows,
+        full_names(staging),
+        team_abbrevs(staging),
+        situations=SITUATIONS,
+        columns=COUNT_COLUMNS,
+        add_rates_to=add_faceoff_rates,
     )
     for row in rows:
         row["season"] = args.season
@@ -71,7 +96,10 @@ def main():
     lost = sum(c["faceoffs"] for (p, t, s), c in totals.items() if s == "all" and (p, t) not in in_table)
     print(f"Season {args.season}: {len(rows)} rows ({len({r['player_id'] for r in rows})} skaters)")
     print(f"Written to {out}")
-    print(f"Faceoff events skipped (missing player, team or game): {skipped}; faceoffs of players not in the season totals: {lost}")
+    print(
+        f"Faceoff events skipped (missing player, team or game): {skipped}; "
+        f"faceoffs of players not in the season totals: {lost}"
+    )
     shown = [r for r in rows if r["situation"] == "all" and (r["kind"] != "team" or r["teams"] == r["team"])]
     top = sorted((r for r in shown if r["faceoffs"] >= 500), key=lambda r: -r["faceoff_pct"])
     print("\nFaceoff %, best five and worst five (at least 500 faceoffs):")

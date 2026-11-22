@@ -1,15 +1,15 @@
 """Phase 8: fan-facing column labels, descriptions and groups for the app's tables (pure data and lookups).
 
 The app tables use column names like cf_pct_rel_5v5. This module is the one place that says, for each table the app
-shows, which columns are shown, in which labeled group, under which short label, with which plain-English description,
-and which are on by default. The pages draw their grouped header row and the Columns picker from it.
+shows, which columns are shown, in which labeled group, under which short label, and with which plain-English
+description. The pages draw their grouped header row and the "What the columns mean" section from it.
 
 Tables: "players" (player_season_app), "teams" (team_season_app), "goalies" (goalie_season_display),
         "lines" (unit_season_display, lines and pairs).
 
 FIXED[table]   columns always shown first (the row's name, never part of the picker)
 GROUPS[table]  [(group label, [column, ...]), ...] in display order
-DEFAULTS[table] columns shown when the page first opens
+DEFAULTS[table] a shorter, suggested set of columns (the app currently shows every column in GROUPS)
 HIDDEN[table]  columns in the file that are never shown (ids and helper columns)
 Every column in a table file must be in exactly one of FIXED, GROUPS or HIDDEN; tests/test_column_labels.py checks
 this against the files in app_data/, so a new column cannot be added without a label.
@@ -41,9 +41,9 @@ LABELS = {
     "blocked_shots": "Blk",
     "giveaways": "Give",
     "takeaways": "Take",
-    "toi_seconds": "TOI",
+    "toi_seconds": "TOI (min)",
     "shifts": "Shifts",
-    "toi_per_game_seconds": "TOI/GP",
+    "toi_per_game_seconds": "TOI/GP (min)",
     "goals_per_60": "G/60",
     "assists_per_60": "A/60",
     "points_per_60": "PTS/60",
@@ -175,9 +175,9 @@ DESCRIPTIONS = {
     "blocked_shots": "Shots blocked by the player.",
     "giveaways": "Giveaways, as counted by each arena's scorers.",
     "takeaways": "Takeaways, as counted by each arena's scorers.",
-    "toi_seconds": "Total ice time, all situations.",
+    "toi_seconds": "Total ice time, all situations, in minutes.",
     "shifts": "Number of shifts.",
-    "toi_per_game_seconds": "Average ice time per game.",
+    "toi_per_game_seconds": "Average ice time per game, in minutes.",
     "goals_per_60": "Goals per 60 minutes of ice time.",
     "assists_per_60": "Assists per 60 minutes of ice time.",
     "points_per_60": "Points per 60 minutes of ice time.",
@@ -250,12 +250,12 @@ DESCRIPTIONS = {
     "even_strength_shots_against": "Shots faced at even strength.",
     "even_strength_goals_against": "Goals allowed at even strength.",
     "even_strength_save_pct": "Save percentage at even strength.",
-    "power_play_shots_against": "Shots faced while the other team had the power play.",
+    "power_play_shots_against": "Shots faced while the other team had the power play (his team was shorthanded).",
     "power_play_goals_against": "Goals allowed while the other team had the power play.",
     "power_play_save_pct": "Save percentage while the other team had the power play.",
-    "shorthanded_shots_against": "Shots faced while his team was shorthanded.",
-    "shorthanded_goals_against": "Goals allowed while his team was shorthanded.",
-    "shorthanded_save_pct": "Save percentage while his team was shorthanded.",
+    "shorthanded_shots_against": "Shots faced while his own team had the power play.",
+    "shorthanded_goals_against": "Goals allowed while his own team had the power play.",
+    "shorthanded_save_pct": "Save percentage while his own team had the power play (the other team was shorthanded).",
     "games": "Games the unit played together.",
     "minutes": "Minutes together at 5v5.",
     "minutes_per_game": "Minutes together per game they played together.",

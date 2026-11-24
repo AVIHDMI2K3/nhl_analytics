@@ -2,6 +2,8 @@
 
 A data pipeline and app that gives NHL fans basic and advanced stats, and the tools to build their own analysis from them.
 
+**Live app:** https://nhl-analytics.streamlit.app/
+
 > **Status: in development (portfolio project).** The data pipeline is built: raw ingestion, staging tables, the on-ice join, the metrics, validation against Natural Stat Trick, the line and defense-pair tables, the skater percentiles and the player similarity table. The Streamlit app has pages for players, lines and pairs, teams and stat definitions; the player comparison and similarity pages, and the deployment, are next. See [Project status](#project-status).
 
 ## About

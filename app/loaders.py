@@ -9,7 +9,7 @@ from shared import settings
 @st.cache_data(show_spinner=False)
 def _read(table, season=None):
     folder = settings.APP_DATA_ROOT if season is None else settings.APP_DATA_ROOT / f"season={season}"
-    return pd.read_parquet(folder / f"{table}.parquet")
+    return pd.read_parquet(folder / f"{table}.parquet", partitioning=None)
 
 
 def load_players(season):

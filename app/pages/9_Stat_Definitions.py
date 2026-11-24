@@ -16,7 +16,11 @@ with st.container(border=True):
         "while he was on the ice.\n"
         "- **Per 60** rates put players with different ice time on the same footing.\n"
         "- **TOT** is a player's combined row after a trade.\n"
-        "- Save percentages are shown as fractions (.915). Every other percentage is out of 100."
+        "- Save percentages are shown as fractions (.915). Every other percentage is out of 100.\n"
+        "- **Minimums.** Players: every skater who played is in the data, and the page's minimum only hides players "
+        "below it. Goalies: the page starts at 10 games. Lines and pairs: combinations under the data's cutoff "
+        "(the smallest time together in the table) are left out. Percentile ranks: only skaters with at least 600 "
+        "minutes at 5v5 are ranked against each other."
     )
 
 choice = st.radio("Table", list(TABLES), horizontal=True, label_visibility="collapsed")

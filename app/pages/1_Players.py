@@ -34,13 +34,15 @@ else:
 
 unit = "minutes at 5v5" if skaters else "games played"
 limit = f" with at least {minimum} {unit}; set the slider to 0 to see everyone" if minimum else ""
-note = (
-    " Rates such as CF% on little ice time can mislead; raise the minimum to leave those players out."
+why = (
+    "Every skater who played that season is in the data; the minimum only hides players below it. Rates such as "
+    "CF% on little ice time can mislead, so raise the minimum to leave those players out."
     if skaters
-    else ""
+    else "The minimum hides goalies who barely played, because their save percentages swing on a few shots. "
+    "Set it to 0 to see everyone."
 )
 st.caption(
-    f"{rows['player_id'].nunique():,} {kind.lower()}{limit}. TOT is a player's combined row after a trade.{note}"
+    f"{rows['player_id'].nunique():,} {kind.lower()}{limit}. TOT is a player's combined row after a trade. {why}"
 )
 st.dataframe(table_view.grouped_frame(rows, data, TABLE, name_as_index=True), height=720)
 

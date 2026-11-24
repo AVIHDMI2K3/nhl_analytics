@@ -13,6 +13,7 @@ st.write(
 )
 st.page_link("pages/1_Players.py", label="Browse players", icon=":material/arrow_forward:")
 st.page_link("pages/2_Lines_and_Pairs.py", label="Browse lines and pairs", icon=":material/arrow_forward:")
+st.page_link("pages/3_Teams.py", label="Browse teams", icon=":material/arrow_forward:")
 st.page_link("pages/9_Stat_Definitions.py", label="What do the stats mean?", icon=":material/help:")
 
 st.subheader("What you can do here")
@@ -26,7 +27,7 @@ cards = [
     ("Similar Players", "The closest players to the one you pick, in the same season or across all three."),
     ("Teams", "Team records, shot share, power play and penalty kill, all in one table."),
 ]
-built = {"Players", "Lines and Pairs"}
+built = {"Players", "Lines and Pairs", "Teams"}
 for column, (title, text) in zip(st.columns(len(cards)), cards, strict=True):
     with column, st.container(border=True):
         st.markdown(f"**{title}**" + ("" if title in built else " (coming soon)"))

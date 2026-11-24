@@ -29,8 +29,8 @@ minimum = minimum_col.slider(
 rows = table_view.filter_units(units, table_view.UNIT_TYPES[kind], name, team, minimum)
 st.caption(
     f"{len(rows):,} {kind.lower()} with at least {minimum} minutes together. Combinations with under "
-    f"{units['minutes'].min():.0f} minutes together are not in the data, so a player traded mid-season may show "
-    "lines for only one of his teams."
+    f"{units['minutes'].min():.0f} minutes together are not in the data, because most of them are one-off "
+    "pairings. A player traded mid-season may therefore show lines for only one of his teams."
 )
 frame = table_view.grouped_frame(rows, units, TABLE, name_as_index=True)
 frame.index.name = "Line" if kind == "Forward lines" else "Pair"

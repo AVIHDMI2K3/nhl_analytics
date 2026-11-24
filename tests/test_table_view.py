@@ -261,3 +261,27 @@ def test_slider_max_never_collapses_to_nothing():
     assert tv.slider_max(pd.Series([], dtype=float), 25) == 25
     assert tv.slider_max(pd.Series([0.0]), 25) == 25
     assert tv.slider_max(pd.Series([float("nan")]), 50) == 50
+
+
+def test_filter_teams_by_name_or_abbreviation():
+    teams = pd.DataFrame(
+        {
+            "team": ["TOR", "VAN", "UTA"],
+            "team_name": ["Toronto Maple Leafs", "Vancouver Canucks", "Utah Hockey Club"],
+            "points": [90, 80, 70],
+        }
+    )
+    assert list(tv.filter_teams(teams)["team"]) == ["TOR", "VAN", "UTA"]
+    assert list(tv.filter_teams(teams, " maple ")["team"]) == ["TOR"]
+    assert list(tv.filter_teams(teams, "van")["team"]) == ["VAN"]
+    assert list(tv.filter_teams(teams, "uta")["team"]) == ["UTA"]
+    assert tv.filter_teams(teams, "zzz").empty
+
+
+def test_the_team_table_lays_out_with_its_seven_groups():
+    teams = pd.DataFrame({c: [1.0] for c in tv.all_columns("teams")})
+    teams["team_name"] = ["Toronto Maple Leafs"]
+    frame = tv.grouped_frame(teams, teams, "teams", name_as_index=True)
+    assert len(frame.columns) == len(tv.all_columns("teams"))
+    assert frame.columns.get_level_values(0).nunique() == 7
+    assert frame.index.name == labels.label("team_name")

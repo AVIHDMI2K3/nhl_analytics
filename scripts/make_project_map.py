@@ -18,7 +18,7 @@ from pathlib import Path
 import pyarrow.parquet as pq
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CODE_FOLDERS = ("src", "scripts", "tests")
+CODE_FOLDERS = ("src", "app", "config", "scripts", "tests")
 DATA_LAYERS = ("staging", "intermediate", "metrics")
 OUTPUT = REPO_ROOT / "docs" / "project_map.md"
 SKIP_PARTS = {"__pycache__", ".git", ".venv", "node_modules"}

@@ -11,7 +11,13 @@ sys.path.insert(0, str(ROOT / "app"))
 
 testing = pytest.importorskip("streamlit.testing.v1")
 
-PAGES = ["Home.py", "pages/1_Players.py", "pages/2_Lines_and_Pairs.py", "pages/9_Stat_Definitions.py"]
+PAGES = [
+    "Home.py",
+    "pages/1_Players.py",
+    "pages/2_Lines_and_Pairs.py",
+    "pages/3_Teams.py",
+    "pages/9_Stat_Definitions.py",
+]
 
 
 def run_page(page):
@@ -55,3 +61,14 @@ def test_lines_page_shows_every_column_for_lines_and_for_pairs():
     app.radio[0].set_value("Defense pairs").run()
     assert not app.exception, [e.value for e in app.exception]
     assert len(app.dataframe) == 1
+
+
+def test_teams_page_shows_every_column_and_a_search_narrows_it():
+    app = run_page("pages/3_Teams.py")
+    table = app.dataframe[0].value
+    assert len(table.columns) == 38  # 38 stats (the team name is the index)
+    assert table.columns.nlevels == 2
+    assert len(table) >= 32
+    app.text_input[0].set_value("Toronto").run()
+    assert not app.exception, [e.value for e in app.exception]
+    assert list(app.dataframe[0].value.index) == ["Toronto Maple Leafs"]

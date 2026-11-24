@@ -63,6 +63,15 @@ def filter_goalies(df, name="", team=ALL_TEAMS, min_games=0):
     return rows[rows["games_played"].fillna(0) >= min_games]
 
 
+def filter_teams(teams, name=""):
+    """Teams whose full name or abbreviation contains `name`, in the table's order (points, then goal difference)."""
+    text = name.strip()
+    if not text:
+        return teams
+    found = teams["team_name"].str.contains(text, case=False, regex=False)
+    return teams[found | teams["team"].str.contains(text, case=False, regex=False)]
+
+
 def slider_max(values, step):
     """The top end for a minimum-value slider: the largest value in the data, rounded up to the slider's step."""
     top = values.max()

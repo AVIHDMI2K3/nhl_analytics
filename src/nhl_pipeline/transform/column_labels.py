@@ -291,6 +291,9 @@ OVERRIDES = {
         "points": "Standings points: 2 for a win, 1 for an overtime or shootout loss.",
         "cf_5v5": "Shot attempts (shots, misses and blocks) for at 5v5.",
     },
+    "lines": {
+        "team": "The team's abbreviation.",
+    },
     "goalies": {
         "wins": "Games won as the goalie of record.",
         "losses": "Games lost in regulation as the goalie of record.",
@@ -305,7 +308,7 @@ FIXED = {
     "players": ("name", "team", "position"),
     "teams": ("team_name",),
     "goalies": ("name", "team"),
-    "lines": ("label",),
+    "lines": ("label", "team"),
 }
 
 GROUPS = {
@@ -445,7 +448,6 @@ HIDDEN = {
         "season",
         "unit_id",
         "team_id",
-        "team",
         "unit_type",
         "positions",
         "player_names",

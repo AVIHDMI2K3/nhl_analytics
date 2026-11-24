@@ -25,7 +25,7 @@ from line_display import MAX_MEMBERS, build_unit_display
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STAGING_ROOT = REPO_ROOT / "data" / "staging"
 METRICS_ROOT = REPO_ROOT / "data" / "metrics"
-DEFAULT_MIN_MINUTES = 60
+DEFAULT_MIN_MINUTES = 20
 RATE_NAMES = (
     "cf_pct",
     "ff_pct",

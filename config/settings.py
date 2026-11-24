@@ -8,10 +8,9 @@ APP_DATA_ROOT = REPO_ROOT / "app_data"
 # A season is coded by the year it starts in (2025 is 2025-26). Newest first, which is the order the app lists them.
 SEASONS = (2025, 2024, 2023)
 
-DEFAULT_MIN_MINUTES_5V5 = 600
-MAX_MIN_MINUTES_5V5 = 1500
+DEFAULT_MIN_MINUTES_5V5 = 0
 DEFAULT_MIN_GAMES_GOALIE = 10
-MAX_MIN_GAMES_GOALIE = 70
+DEFAULT_MIN_MINUTES_UNIT = 100
 
 # Fill these in once the repo is public; the Home page shows plain text until then.
 GITHUB_URL = None

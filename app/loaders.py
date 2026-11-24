@@ -17,6 +17,11 @@ def load_players(season):
     return _read("player_season_app", season)
 
 
+def load_units(season):
+    """Forward lines and defense pairs of one season, 5v5 (unit_season_display)."""
+    return _read("unit_season_display", season)
+
+
 def load_goalies(season):
     """Goalies of one season: record, overall and by-situation save numbers (goalie_season_display)."""
     return _read("goalie_season_display", season)

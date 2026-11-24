@@ -24,17 +24,24 @@ name = name_col.text_input("Search player", placeholder="Name")
 team = team_col.selectbox("Team", [table_view.ALL_TEAMS, *table_view.team_options(data)])
 if skaters:
     position = position_col.selectbox("Position", list(table_view.POSITION_FILTERS))
-    minimum = minimum_col.slider(
-        "Minimum 5v5 minutes", 0, settings.MAX_MIN_MINUTES_5V5, settings.DEFAULT_MIN_MINUTES_5V5, step=50
-    )
+    top = table_view.slider_max(table_view.shown_rows(data)["minutes_5v5"], 50)
+    minimum = minimum_col.slider("Minimum 5v5 minutes", 0, top, settings.DEFAULT_MIN_MINUTES_5V5, step=50)
     rows = table_view.filter_players(data, name, team, position, minimum)
 else:
-    minimum = minimum_col.slider(
-        "Minimum games played", 0, settings.MAX_MIN_GAMES_GOALIE, settings.DEFAULT_MIN_GAMES_GOALIE
-    )
+    top = table_view.slider_max(table_view.shown_rows(data)["games_played"], 1)
+    minimum = minimum_col.slider("Minimum games played", 0, top, min(settings.DEFAULT_MIN_GAMES_GOALIE, top))
     rows = table_view.filter_goalies(data, name, team, minimum)
 
-st.caption(f"{rows['player_id'].nunique():,} {kind.lower()}. TOT is a player's combined row after a trade.")
+unit = "minutes at 5v5" if skaters else "games played"
+limit = f" with at least {minimum} {unit}; set the slider to 0 to see everyone" if minimum else ""
+note = (
+    " Rates such as CF% on little ice time can mislead; raise the minimum to leave those players out."
+    if skaters
+    else ""
+)
+st.caption(
+    f"{rows['player_id'].nunique():,} {kind.lower()}{limit}. TOT is a player's combined row after a trade.{note}"
+)
 st.dataframe(table_view.grouped_frame(rows, data, TABLE, name_as_index=True), height=720)
 
 traded = table_view.traded_players(rows)

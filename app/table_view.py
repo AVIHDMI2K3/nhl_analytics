@@ -1,13 +1,16 @@
 """The logic behind the app's tables, in plain pandas (no Streamlit): which rows to show, and how to lay the chosen
 columns out under their group labels. Kept apart from the pages so it can be tested."""
 
+import math
+
 import pandas as pd
 from shared import labels
 
 ALL_TEAMS = "All teams"
 POSITION_FILTERS = {"All skaters": None, "Forwards": ("C", "L", "R"), "Defensemen": ("D",)}
 DEFAULT_DECIMALS = 1
-DECIMALS = {"points_pct": 3}
+DECIMALS = {"points_pct": 3, "gf_per_60": 2, "ga_per_60": 2}
+UNIT_TYPES = {"Forward lines": "line", "Defense pairs": "pair"}
 # Stored as percentages (91.5) and shown the way hockey writes them: a fraction with three decimals (0.915).
 FRACTION_COLUMNS = ("save_pct", "even_strength_save_pct", "power_play_save_pct", "shorthanded_save_pct")
 
@@ -58,6 +61,28 @@ def filter_goalies(df, name="", team=ALL_TEAMS, min_games=0):
     if name.strip():
         rows = rows[rows["name"].str.contains(name.strip(), case=False, regex=False)]
     return rows[rows["games_played"].fillna(0) >= min_games]
+
+
+def slider_max(values, step):
+    """The top end for a minimum-value slider: the largest value in the data, rounded up to the slider's step."""
+    top = values.max()
+    return step if pd.isna(top) else max(step, math.ceil(top / step) * step)
+
+
+def unit_team_options(units):
+    """Team abbreviations in a lines and pairs table, alphabetical."""
+    return sorted(units["team"].dropna().unique())
+
+
+def filter_units(units, unit_type, name="", team=ALL_TEAMS, min_minutes=0):
+    """Lines (`unit_type` "line") or pairs ("pair") after the page's filters. The name search looks at every player
+    on the unit; the minutes are together at 5v5."""
+    rows = units[units["unit_type"] == unit_type]
+    if team != ALL_TEAMS:
+        rows = rows[rows["team"] == team]
+    if name.strip():
+        rows = rows[rows["player_names"].str.contains(name.strip(), case=False, regex=False)]
+    return rows[rows["minutes"].fillna(0) >= min_minutes]
 
 
 def all_columns(table):

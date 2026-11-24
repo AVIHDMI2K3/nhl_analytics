@@ -186,7 +186,6 @@ def test_season_labels_and_order():
     assert settings.season_label(2025) == "2025-26"
     assert settings.season_label(2099) == "2099-00"
     assert list(settings.SEASONS) == sorted(settings.SEASONS, reverse=True)
-    assert settings.DEFAULT_MIN_MINUTES_5V5 <= settings.MAX_MIN_MINUTES_5V5
 
 
 def test_traded_players_lists_only_players_with_a_total_row(df):
@@ -202,3 +201,63 @@ def test_team_breakdown_is_the_total_then_each_team_by_games(df):
 
 def test_team_breakdown_of_a_one_team_player_is_that_team(df):
     assert list(tv.team_breakdown(df, 1)["team"]) == ["TOR"]
+
+
+@pytest.fixture
+def units():
+    return pd.DataFrame(
+        {
+            "team": ["TOR", "TOR", "VAN", "VAN"],
+            "unit_type": ["line", "pair", "line", "line"],
+            "label": ["Domi / Matthews / McMann", "Rielly / Benoit", "Boeser / Pettersson / Kuzmenko", "Lines / Short"],
+            "player_names": [
+                "Max Domi / Auston Matthews / Nick Robertson",
+                "Morgan Rielly / Simon Benoit",
+                "Brock Boeser / Elias Pettersson / Andrei Kuzmenko",
+                "A / B / C",
+            ],
+            "games": [29, 40, 50, 5],
+            "minutes": [241.0, 300.5, 420.0, 61.0],
+            "cf_pct": [50.8, 52.1, 55.0, 48.0],
+        }
+    )
+
+
+def test_units_are_split_into_lines_and_pairs(units):
+    assert list(tv.filter_units(units, "line")["team"]) == ["TOR", "VAN", "VAN"]
+    assert list(tv.filter_units(units, "pair")["label"]) == ["Rielly / Benoit"]
+
+
+def test_unit_filters_by_team_player_and_minutes(units):
+    assert list(tv.filter_units(units, "line", team="VAN")["label"]) == [
+        "Boeser / Pettersson / Kuzmenko",
+        "Lines / Short",
+    ]
+    assert list(tv.filter_units(units, "line", name=" matthews ")["team"]) == ["TOR"]
+    assert list(tv.filter_units(units, "line", min_minutes=100)["team"]) == ["TOR", "VAN"]
+    assert tv.unit_team_options(units) == ["TOR", "VAN"]
+
+
+def test_units_lay_out_with_the_team_and_five_groups(units):
+    rows = tv.filter_units(units, "line")
+    frame = tv.grouped_frame(rows, units, "lines", ["games", "minutes", "cf_pct"], name_as_index=True)
+    assert list(frame.columns) == [
+        ("", labels.label("team")),
+        ("Ice time", labels.label("games")),
+        ("Ice time", labels.label("minutes")),
+        ("Shot attempts", labels.label("cf_pct")),
+    ]
+    assert str(frame[("Ice time", labels.label("games"))].dtype) == "Int64"
+    assert frame.index.name == labels.label("label")
+
+
+def test_slider_max_rounds_the_largest_value_up_to_the_step():
+    assert tv.slider_max(pd.Series([5.2, 1605.8, 700.0]), 50) == 1650
+    assert tv.slider_max(pd.Series([1650.0]), 50) == 1650
+    assert tv.slider_max(pd.Series([64, 12]), 1) == 64
+
+
+def test_slider_max_never_collapses_to_nothing():
+    assert tv.slider_max(pd.Series([], dtype=float), 25) == 25
+    assert tv.slider_max(pd.Series([0.0]), 25) == 25
+    assert tv.slider_max(pd.Series([float("nan")]), 50) == 50

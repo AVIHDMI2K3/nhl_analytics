@@ -13,8 +13,8 @@ DEFAULT_MIN_GAMES_GOALIE = 10
 DEFAULT_MIN_MINUTES_UNIT = 100
 
 # Fill these in once the repo is public; the Home page shows plain text until then.
-GITHUB_URL = None
-DATA_NOTES_URL = None
+GITHUB_URL = "https://github.com/AVIHDMI2K3/nhl_analytics"
+DATA_NOTES_URL = "https://github.com/AVIHDMI2K3/nhl_analytics/blob/main/docs/data_notes.md"
 
 
 def season_label(season):

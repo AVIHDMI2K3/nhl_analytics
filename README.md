@@ -68,7 +68,7 @@ pytest
 Run the app from the repository root. It needs only the committed `app_data/` folder, not the pipeline data:
 
 ```
-pip install -r requirements.txt
+pip install -r app/requirements.txt
 streamlit run app/Home.py
 ```
 

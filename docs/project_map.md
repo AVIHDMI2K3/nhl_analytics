@@ -204,12 +204,20 @@ Phase 6: zone starts of lines and defense pairs at 5v5 (pure logic, no file acce
 
 ## app/
 
+### `app/compare_chart.py`
+The Compare page's chart: two players as paired dots, one row per stat, on a 0-100 percentile scale. Built with
+- functions: `chart_label`, `paired_dots`, `_group_chart`
+
+### `app/compare_view.py`
+The logic behind the Compare page, in plain pandas (no Streamlit or chart code): which players can be paired, and
+- functions: `group_of`, `stat_order`, `one_per_player`, `player_options`, `position_group_of`, `distinct_labels`, `comparison`, `players_outside_pool`, `side_by_side`
+
 ### `app/Home.py`
 Home page. Run the app from the repo root with:  streamlit run app/Home.py
 
 ### `app/loaders.py`
 Loads the app's tables from app_data/. Each table is read once and kept in memory (cached) so a click on the
-- functions: `_read`, `load_players`, `load_teams`, `load_units`, `load_goalies`
+- functions: `_read`, `load_players`, `load_teams`, `load_units`, `load_goalies`, `load_percentiles`
 
 ### `app/pages/1_Players.py`
 Players page: one table of skaters or goalies for the chosen season, every stat shown, groups labeled on top.
@@ -219,6 +227,10 @@ Lines and Pairs page: every forward line or defense pair with enough 5v5 ice tim
 
 ### `app/pages/3_Teams.py`
 Teams page: every team of the chosen season in one table, with stat groups labeled across the top.
+
+### `app/pages/4_Player_Comparison.py`
+Player Comparison page: two skaters side by side, each stat a percentile among his position group that season.
+- functions: `pick`, `name_of`
 
 ### `app/pages/9_Stat_Definitions.py`
 Stat definitions page: what every column in the app's tables means, grouped the way the tables are.
@@ -471,10 +483,25 @@ Tests for src/nhl_pipeline/transform/column_labels.py.
 Tests for the comparison script's parsing, using made-up HTML (NOT the real NHL page layout).
 - tests: 4
 
+### `tests/test_compare_chart.py`
+Tests for app/compare_chart.py. Skipped when Altair is not installed (it comes with Streamlit).
+- tests: 4
+- functions: `comparison`
+
 ### `tests/test_compare_html_shifts.py`
 Tests for the helpers of scripts/compare_html_shifts.py.
 - tests: 1
 - functions: `row`
+
+### `tests/test_compare_page.py`
+Smoke test of the Player Comparison page: it asks for two players, then shows the chart and the table. Skipped when
+- tests: 4
+- functions: `open_compare`, `two_forwards`
+
+### `tests/test_compare_view.py`
+Tests for app/compare_view.py.
+- tests: 12
+- functions: `player_rows`, `table`
 
 ### `tests/test_diagnose_boundary_rules.py`
 Tests for the helpers of scripts/diagnose_boundary_rules.py.

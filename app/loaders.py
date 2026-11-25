@@ -30,3 +30,8 @@ def load_units(season):
 def load_goalies(season):
     """Goalies of one season: record, overall and by-situation save numbers (goalie_season_display)."""
     return _read("goalie_season_display", season)
+
+
+def load_percentiles(season):
+    """Skater percentiles of one season, one row per player and stat (player_season_percentiles)."""
+    return _read("player_season_percentiles", season)

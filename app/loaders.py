@@ -35,3 +35,8 @@ def load_goalies(season):
 def load_percentiles(season):
     """Skater percentiles of one season, one row per player and stat (player_season_percentiles)."""
     return _read("player_season_percentiles", season)
+
+
+def load_similarity():
+    """Every ranked skater-season's closest matches, in each mode, all seasons in one file (player_similarity)."""
+    return _read("player_similarity")

@@ -4,7 +4,7 @@ A data pipeline and app that gives NHL fans basic and advanced stats, and the to
 
 **Live app:** https://nhl-analytics.streamlit.app/
 
-> **Status: in development (portfolio project).** The data pipeline is built: raw ingestion, staging tables, the on-ice join, the metrics, validation against Natural Stat Trick, the line and defense-pair tables, the skater percentiles and the player similarity table. The Streamlit app has pages for players, lines and pairs, teams and stat definitions; the player comparison and similarity pages, and the deployment, are next. See [Project status](#project-status).
+> **Status: in development (portfolio project).** The data pipeline is built: raw ingestion, staging tables, the on-ice join, the metrics, validation against Natural Stat Trick, the line and defense-pair tables, the skater percentiles and the player similarity table. The Streamlit app is live, with pages for players, lines and pairs, teams, player comparison and stat definitions; the player similarity page is next. See [Project status](#project-status).
 
 ## About
 
@@ -15,7 +15,8 @@ Features:
 - basic and advanced stats for players and teams (in the app)
 - forward line and defense pair comparison and performance (in the app)
 - team performance (in the app)
-- player comparison with pizza charts, and player similarity (planned; the data tables are built)
+- player comparison, two players' percentiles across 29 stats (in the app)
+- player similarity (planned; the data table is built)
 
 The advanced stats are computed in this repository from the NHL's play-by-play events and shift charts, then checked against official boxscores and Natural Stat Trick, instead of being copied from another site. Simple totals (goals, assists, hits, time on ice and so on) are taken from the NHL boxscore, which was checked against the NHL's official game reports; stats that depend on who was on the ice are calculated here and never mixed with them in one number.
 
@@ -61,7 +62,7 @@ conda activate nhl
 pip install requests tenacity pyarrow polars duckdb pytest streamlit pandas
 ```
 
-Check the install by running the tests from the repository root:
+Check the install by running the tests from the repository root (they also run, with Ruff, on GitHub Actions for every push):
 
 ```
 pytest
@@ -129,8 +130,10 @@ scripts/
                         investigations of small differences between sources
 app/
     Home.py             landing page
-    pages/              Players, Lines and Pairs, Teams and Stat definitions
+    pages/              Players, Lines and Pairs, Teams, Player Comparison and Stat definitions
     table_view.py       filters and table layout for the pages
+    compare_view.py     the Player Comparison page's logic: which players can be paired, how their percentiles are laid out
+    compare_chart.py    the Player Comparison page's paired-dot chart (Altair)
     loaders.py          cached readers of app_data/
     shared.py           makes src/ and config/ importable from the app
 config/settings.py      app settings (seasons, default minimums)
@@ -268,8 +271,8 @@ Each table has a check script in `scripts/` (for example `python scripts/check_t
 | 4 | Metrics (Corsi, Fenwick, rates, relative stats) | In progress. Built for all three seasons: shot attempts, stints, base tables, skater season totals and display table, advanced on-ice tables for players and teams, team basic stats. Skater season totals match the NHL's skater report for every skater (games played and time on ice), and goalie season totals match the NHL's goalie summary for every goalie (record, shots, saves, goals against, shutouts, time on ice). Skater power-play and penalty-kill stats are built (power-play goals, assists and points match the NHL's reports for every skater). Team power-play and penalty-kill percentages are built (within 0.5 points of the NHL's for every team). Skater faceoff counts and percentages are built (counts and percentages match the NHL's faceoff report for every skater, in total, by strength and by zone). Phase 4 is complete except the stats that need the xG model (high-danger goalie stats), which come in Phase 9, after the first version of the app is deployed |
 | 5 | Validation against boxscores and Natural Stat Trick | Done for all three seasons. Boxscore and the NHL's reports were checked in earlier phases. Against Natural Stat Trick (skaters and teams, all situations and 5v5): league totals of shot attempts match within 0.01% for skaters and 0.03% for teams, team time on ice within 0.1 minute for 94-100% of teams, goals exact for 95-99% of skaters, and 72-78% of skaters are within 2 shot attempts of NST. The 57 games of 2024-25 with no API shifts were filled from the NHL's HTML reports. Remaining differences and their causes are in [`docs/data_notes.md`](docs/data_notes.md) |
 | 6 | Line and defense-pair analysis | Done for all three seasons. Forward lines and defense pairs at 5v5 with time together, shot attempts, goals, percentages, per-60 rates and zone starts. A line or pair is found for 98.6-99.0% of 5v5 time and 99.4-99.6% of 5v5 faceoffs, and the units add up to the skaters' 5v5 totals with no violations. The fan-facing table keeps units with at least 20 minutes together. Limits are in [`docs/data_notes.md`](docs/data_notes.md) |
-| 7 | Player comparison (pizza charts) and similarity | Data tables done for all three seasons: percentile ranks of every skater in 29 stats (forwards against forwards, defensemen against defensemen, each season ranked on its own, among the 195-351 skaters per group with at least 600 minutes of 5v5) and the 15 closest skaters of each pool skater, in the same season and across seasons. The charts themselves are drawn in the app (Phase 8). Limits are in [`docs/data_notes.md`](docs/data_notes.md) |
-| 8 | App (Streamlit) and deployment of version 1 (Corsi, shots and goals; no xG) | In progress. Built: Home, Players (with a per-team breakdown for traded players), Lines and Pairs, Teams and Stat definitions. The player comparison and similarity pages and the deployment are next |
+| 7 | Player comparison and similarity | Data tables done for all three seasons: percentile ranks of every skater in 29 stats (forwards against forwards, defensemen against defensemen, each season ranked on its own, among the 195-351 skaters per group with at least 600 minutes of 5v5) and the 15 closest skaters of each pool skater, in the same season and across seasons. The comparison chart is drawn in the app (Phase 8); a pizza chart may follow. Limits are in [`docs/data_notes.md`](docs/data_notes.md) |
+| 8 | App (Streamlit) and deployment of version 1 (Corsi, shots and goals; no xG) | In progress. Deployed on Streamlit Community Cloud at https://nhl-analytics.streamlit.app/ with Home, Players (with a per-team breakdown for traded players), Lines and Pairs, Teams, Player Comparison (two players' percentiles on a paired-dot chart) and Stat definitions, checked by automated tests and GitHub Actions on Linux. The player similarity page is next |
 | 9 | xG model, then high-danger and goalie stats, added to the app as version 2 | Planned |
 
 Findings so far:

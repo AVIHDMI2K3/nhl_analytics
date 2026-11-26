@@ -217,7 +217,7 @@ Home page. Run the app from the repo root with:  streamlit run app/Home.py
 
 ### `app/loaders.py`
 Loads the app's tables from app_data/. Each table is read once and kept in memory (cached) so a click on the
-- functions: `_read`, `load_players`, `load_teams`, `load_units`, `load_goalies`, `load_percentiles`
+- functions: `_read`, `load_players`, `load_teams`, `load_units`, `load_goalies`, `load_percentiles`, `load_similarity`
 
 ### `app/pages/1_Players.py`
 Players page: one table of skaters or goalies for the chosen season, every stat shown, groups labeled on top.
@@ -232,11 +232,18 @@ Teams page: every team of the chosen season in one table, with stat groups label
 Player Comparison page: two skaters side by side, each stat a percentile among his position group that season.
 - functions: `pick`, `name_of`
 
+### `app/pages/5_Player_Similarity_Score.py`
+Player Similarity Score page: the skaters whose season looks most like the chosen player's, by percentile
+
 ### `app/pages/9_Stat_Definitions.py`
 Stat definitions page: what every column in the app's tables means, grouped the way the tables are.
 
 ### `app/shared.py`
 The one place that makes the repo's own modules importable from the app, and re-exports what the pages need.
+
+### `app/similar_view.py`
+The logic behind the Player Similarity Score page, in plain pandas (no Streamlit): which players can be picked, which
+- functions: `mode_label`, `mode_options`, `player_options`, `matches`, `display_table`, `similarity_style`, `styled`, `chosen_match`
 
 ### `app/table_view.py`
 The logic behind the app's tables, in plain pandas (no Streamlit): which rows to show, and how to lay the chosen
@@ -648,6 +655,16 @@ Tests for src/nhl_pipeline/transform/shift_reports.py.
 Tests for the Phase 4.1 shot-attempt logic. A tiny made-up game, no real data.
 - tests: 10
 - functions: `event`, `on_ice_row`, `build`
+
+### `tests/test_similar_page.py`
+Smoke test of the Player Similarity Score page: it asks for a player, then shows his 15 closest matches in either
+- tests: 3
+- functions: `open_similar`, `entries_of_2025`
+
+### `tests/test_similar_view.py`
+Tests for app/similar_view.py.
+- tests: 11
+- functions: `entry_row`, `similarity`, `percentiles`, `rgb_of`
 
 ### `tests/test_similarity.py`
 Tests for src/nhl_pipeline/transform/similarity.py.
